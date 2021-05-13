@@ -141,14 +141,14 @@ SyscallHandler(ExceptionType _et)
     {
 
         int bufferUsr = machine->ReadRegister(4);
-        int size = machine->ReadRegister(5);
+        int size = machine->ReadRegister(5) + 1;
         int bytesRead;
         OpenFileId id = machine->ReadRegister(6);
 
         ASSERT(size > 0);
         ASSERT(id >= 0);
 
-        char bufferSys[size + 1];
+        char bufferSys[size];
         switch (id)
         {
         case CONSOLE_INPUT:
