@@ -1,0 +1,46 @@
+1)
+Las multicolas de prioridad pueden comportarse como ronda egoísta si solo se cuenta con 2 colas de prioridad y se cumplen los siguientes requisitos para cada caso:
+Si a > b:
+ puede alcanzarse si los nuevos procesos entran a la cola de menor prioridad y pueden ser promovidos, mientras que los de la cola de mayopr prioridad no se degradan
+Si a < b: (FIFO)
+ puede alcanzarse si los nuevos procesos entran a la cola de menor prioridad y pueden ser promovidos únicamente cuando la cola de mayor prioridad es vacía. Los procesos en la cola de mayor prioridad no se degradan
+Si b = 0:
+ puede alcanzarse si solo se usa una cola de prioridad, pues los procesos nuevos deben ser encolados inmediatamente
+
+2)
+Ventajas del aging:
+    Da prioridad a los procesos nuevos para ejecutarse, y si son cortos terminan más rápido.
+    Genera menos carga en la cola de alta prioridad
+Desventajas del aging:
+    La degradación de procesos provoca que los procesos largos sean degradados continuamente hasta el punto de sufrir una posible inanición
+    Las colas de baja prioridad se sobrecargan cuando hay muchos procesos largos
+
+Ventajas de la retroalimentación inversa:
+    Los procesos de baja prioridad tienen más oportunidades de ser promovidos a alta prioridad y ser ejecutados
+    Agiliza la ejecución de procesos largos
+Desventajas de la retroalimentación inversa:
+    Puede generar una sobrecarga en las colas de alta prioridad
+    Puede volverse un esquema de ronda egoísta si no se maneja bien la retroalimentción
+
+3)
+- Ejecutamos un fibonacci recursivo simple programado en C++, ejecutado con n=45
+real    0m8.031s
+user    0m8.031s
+sys     0m0.000s
+
+-El valor de tiempo de núcleo fue 0, y podría aumentarse levemente pues la única llamada al sistema fue un cout y es tan veloz que parecería ser insignificante para el comando time
+-El valor de tiempo de sistema fue 0, y tampoco se aumentará en gran medida, por la misma razón al punto anterior 
+-El valor de tiempo de usuario fue de 8.031s, pues todo el proceso se realiza en modo usuario. De aumentar el n, este valor aumentará. El mínimo posible que reconozca time es 0, pues el procesamiento de n = 0 y n = 1 es casi insignificante
+-El valor de tiempo de uso del procesador será apenas menor al tiempo de usuario
+-El tiempo desocupado será 0, pues no espera interacciones con el usuario ni con llamadas a otros procesos (escritura, lectura, etc)
+-La utilización del CPU puede variar entre el 100% (si fuera el único proceso en ejecución) o algo un poco mayor a 0% (pues al completar su ejecución va a haber usado al menos un pequeño porcentaje del CPU)
+
+- Ejecutamos un fibonacci recursivo simple programado en C++, pero esta vez toma un valor n por consola. Usamos otra vez n = 45:
+real    0m8.727s
+user    0m7.703s
+sys     0m0.016s
+
+-Vemos que aumentaron los tiempos de núcleo y sistema pues tuvimos que esperar el ingreso de información por parte del usuario
+-El tiempo de usuario fue 7.703s, muy similar al caso anterior, y pasará lo mismo con el tiempo de uso del procesador
+-El tiempo desocupado cambiará: al esperar el ingreso de datos por parte del usuario, el proceso estará desocupado hasta que registre un evento (limitado por entrada/salida). En nuestro caso fue aproximadamente un segundo, pero podría extenderse mucho más de dejarlo sin entrada
+-La utilización del CPU variará como en el caso anterior

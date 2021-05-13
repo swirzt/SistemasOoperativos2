@@ -1,0 +1,5 @@
+Ejercicio 4
+b)
+No podemos solucionar el problema de inversión de prioridades en semaforos ya que a diferencia de los locks, 
+el proceso que disminuye el semáforo y quien lo incrementa no son necesariamente el mismo, por lo que no
+podemos asignarles nuevas prioridades o devolverles sus originales.

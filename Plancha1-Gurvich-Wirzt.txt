@@ -1,0 +1,179 @@
+1) Preferimos emular una CPU para poder tener control sobre las caracteríticas físicas del sistema sin necesidad de tocar 
+el hardware subyacente y facilitar el aprendizaje mediante prueba y error sin el riesgo de romper algo del sistema
+
+2)
+MEMORY_SIZE = NUM_PHYS_PAGES * PAGE_SIZE
+PAGE_SIZE = SECTOR_SIZE
+MEMORY_SIZE = 32 * 128 = 4096 BYTES DE MEMORIA = 4 Kilobytes
+
+3) Para cambair la cantidad de memoria podríamos aumentar la cantidad de páginas
+
+4)
+Hay 32 tracks
+Dentro de cada track hay 32 sectores
+Cada sector tiene un tamaño de 128 bytes
+Entonces el tamaño de nuestro disco es 32 x 32 x 128 bytes = 131072 bytes = 128 kilobytes
+
+5) La máquina virtual de nachos simula un total de 59 instrucciones (según lo visto en el archivo mips_sim.cc)
+
+6) La función main está definida en los archivos:
+
+/bin/coff2flat.c:main(int argc, char *argv[])
+/bin/coff2noff.c:main(int argc, char *argv[])
+/bin/disasm.c:main(int argc, char *argv[])
+/bin/fuse/nachosfuse.c:main(int argc, char *argv[])
+/bin/main.c:main(int argc, char *argv[])
+/bin/out.c:main(int argc, char *argv[])
+/bin/readnoff.c:main(int argc, char *argv[])
+/threads/main.cc:main(int argc, char **argv)
+/userland/echo.c:main(int argc, char *argv[])
+/userland/filetest.c:main(void)
+/userland/halt.c:main(void)
+/userland/matmult.c:main(void)
+/userland/shell.c:main(void)
+/userland/sort.c:main(void)
+/userland/tiny_shell.c:main(void)
+/userland/touch.c:main(int argc, char *argv[])
+
+El archivo main de userprog está definido en /threads/main.cc
+Varía su compilación dependiendo de lo que se definió en el entorno de compilación antes (ifdef)
+
+7)
+Main llama a Initialize que está en threads/system.cc
+    Initialize llama a: 
+    - ASSERT que está en lib/assert.hh
+    - ParseDebugOpts que está en threads/system.hh
+    - strcmp que está en string.h
+    - RandomInit que está en machine/system_dep.hh
+    - atoi que está en stdlib.h
+    - SetFlags que está en lib/debug.hh
+    - SetOpts que está en lib/debug.hh
+    - Timer que está en machine/timer.hh
+    - Thread que está en threads/thread.hh
+    - SetStatus que está en threads/thread.hh
+    - Enable que está en machine/interrupt.hh
+    - CallOnUserAbort que está en machine/system_dep.hh
+    - PreemptiveScheduler que está en threads/preemptive.hh
+    - SetUp que está en threads/preemptive.hh
+    - SetExceptionHandlers que está en userprog/exception.hh
+    
+Main llama a DEBUG que está en lib/utility.hh
+    DEBUG llama a Print que se encuentra en lib/debug.hh
+
+Main llama a strcmp que está en string.h
+
+Main llama a SysInfo que está en threads/sys_info.hh
+    SysInfo llama a printf que está en stdio.h
+
+Main llama a PrintVersion que está en threads/main.cc
+    PrintVersion llama a printf que esta en stdio.h
+
+Main llama a ThreadTest que está definida en threads/thread_test.cc
+    ThreadTest llama a:
+    - DEBUG que está en lib/utility.hh
+    - Choose que está en threads/thread_test.cc
+    - Run que está en threads/thread_test.cc    
+
+Main llama a Halt que está en machione/interrupt.hh
+    Halt llama a:
+    - printf que está en stdio.h
+    - Print que está machine/statistics.hh
+    - Cleanup que está en threads/system.hh
+
+Main llama a Finish que está definido en threads/thread.cc
+    Finish llama a:
+    - SetLevel que está en machine/interrupt.hh
+    - ASSERT que está en lib/assert.hh
+    - DEBUG que está en lib/utility.hh
+    - Sleep que está en threads/thread.cc
+
+8) DEBUG revisa banderas e imprime un mensaje acorde a lo enviado
+ASSERT termina el programa si no se cumple la condición
+
+9) Las banderas de depuración son:
+* `+` -- turn on all debug messages.
+* `t` -- thread system.
+* `s` -- semaphores, locks, and conditions.
+* `i` -- interrupt emulation.
+* `m` -- machine emulation (requires *USER_PROGRAM*).
+* `d` -- disk emulation (requires *FILESYS*).
+* `f` -- file system (requires *FILESYS*).
+* `a` -- address spaces (requires *USER_PROGRAM*).
+* `e` -- exception handling (requires *USER_PROGRAM*).
+* `n` -- network emulation (requires *NETWORK*).
+
+10)
+La constante USER_PROGRAM está definida en:
+filesys/Makefile
+network/Makefile
+userprog/Makefile
+vmem/Makefile
+
+La constante FILESYS_NEEDED está definida en:
+filesys/Makefile
+network/Makefile
+userprog/Makefile
+vmem/Makefile
+
+La constante FILESYS_STUB está definida en:
+userprog/Makefile
+vmem/Makefile
+
+La constante NETWORK está definida en:
+network/Makefile    
+
+11)
+General options
+---------------
+* `-d`  -- causes certain debugging messages to be printed (cf.
+           `utility.hh`).
+* `-do` -- enables options that modify the behavior when printing
+           debugging messages.
+* `-p`  -- enables preemptive multitasking for kernel threads.
+* `-rs` -- causes `Yield` to occur at random (but repeatable) spots.
+* `-z`  -- prints version and copyright information, and exits.
+*THREADS* options
+-----------------
+* `-tt` -- tests the threading subsystem; the user is asked to choose a
+           test to run from a collection of available tests.
+*USER_PROGRAM* options
+----------------------
+* `-s`  -- causes user programs to be executed in single-step mode.
+* `-x`  -- runs a user program.
+* `-tc` -- tests the console.
+*FILESYS* options
+-----------------
+* `-f`  -- causes the physical disk to be formatted.
+* `-cp` -- copies a file from UNIX to Nachos.
+* `-pr` -- prints a Nachos file to standard output.
+* `-rm` -- removes a Nachos file from the file system.
+* `-ls` -- lists the contents of the Nachos directory.
+* `-D`  -- prints the contents of the entire file system.
+* `-c`  -- checks the filesystem integrity.
+* `-tf` -- tests the performance of the Nachos file system.
+*NETWORK* options
+-----------------
+* `-n`  -- sets the network reliability.
+* `-id` -- sets this machine's host id (needed for the network).
+* `-tn` -- runs a simple test of the Nachos network software.
+
+-rs genera que Yield se llame de manera aleatoria durante la ejecución del proceso,
+esto puede ser para simular la ejecución no continua de un procesoo en una pc con scheduler
+
+12) Resuelto en código
+
+13) 
+List es una lista simplemente enlazada que mantiene un valor de prioridad para cuando se quiere ordenar
+
+SynchList es una lista para la cual los hilos que tratan de sacar un elemento de la lista deben esperar que sea no vacía
+y solo un hilo puede acceder al mismo tiempo. Es decir, aplica bloqueos cuando varios procesos a la vez tratan de acceder a ella
+
+14) Resuelto en codigo
+
+15) Resuelto en código
+Entendemos el uso del semáforo se requiere en cada iteración del for de los hilos
+
+16,17) Resuelto en código
+
+18) Resuelto en código. No pudimos incluirlo en otro archivo por no entender cómo funciona el make,
+así que modificamos thread_test_garden
