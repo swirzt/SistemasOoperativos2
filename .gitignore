@@ -13,3 +13,4 @@ shell
 sort
 tiny_shell
 touch
+*.depends

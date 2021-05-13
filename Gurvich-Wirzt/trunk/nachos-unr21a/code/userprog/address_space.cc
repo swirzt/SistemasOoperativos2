@@ -97,7 +97,7 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
     while (read < initDataSize)
     {
       uint32_t addr = Translate(virtualAddr + i);
-      exe.ReadCodeBlock(&mainMemory[addr], 1, read);
+      exe.ReadDataBlock(&mainMemory[addr], 1, read);
       read++;
       i++;
     }

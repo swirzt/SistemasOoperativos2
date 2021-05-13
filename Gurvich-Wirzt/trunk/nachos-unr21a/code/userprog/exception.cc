@@ -106,9 +106,9 @@ SyscallHandler(ExceptionType _et)
                   FILE_NAME_MAX_LEN);
             break;
         }
-
+        printf("Ayudaaaaa %s\n", filename);
         DEBUG('e', "`Create` requested for file `%s`.\n", filename);
-        ASSERT(fileSystem->Create(filename, 1023));
+        ASSERT(fileSystem->Create(filename, 0));
         DEBUG('e', "Succesfully created a new file with name %s \n", filename);
         break;
     }
@@ -141,7 +141,7 @@ SyscallHandler(ExceptionType _et)
     {
 
         int bufferUsr = machine->ReadRegister(4);
-        int size = machine->ReadRegister(5) + 1;
+        int size = machine->ReadRegister(5);
         int bytesRead;
         OpenFileId id = machine->ReadRegister(6);
 
