@@ -65,7 +65,11 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
 
   // Zero out the entire address space, to zero the unitialized data
   // segment and the stack segment.
-  memset(mainMemory, 0, size);
+  // memset(mainMemory, 0, size);
+  for (unsigned i = 0; i < numPages; i++)
+  {
+    memset(&mainMemory[pageTable[i].physicalPage * PAGE_SIZE], 0, PAGE_SIZE);
+  }
 
   // Then, copy in the code and data segments into memory.
   uint32_t codeSize = exe.GetCodeSize();
@@ -110,6 +114,8 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
 /// Nothing for now!
 AddressSpace::~AddressSpace()
 {
+  for (unsigned i = 0; i < numPages; i++)
+    pages->Clear(pageTable[i].physicalPage);
   delete[] pageTable;
 }
 

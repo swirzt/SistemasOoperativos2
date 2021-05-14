@@ -53,10 +53,7 @@ Thread::Thread(const char *threadName, bool join)
     openFiles = new Table<OpenFile *>();
     openFiles->Add(nullptr);
     openFiles->Add(nullptr);
-
-    /////////////////// AGREGAR LSO NUMEROOS PARA CONSOLA PR DEFECTOKLJADSFHNBKJPASDHFBPKJADSFHGBPJKOAFDHBKPJSADFGHSJKDFGJHGFDSJKHGDFSJHGFDSJHgfds
-    ///////////////// OKJFDHOKJSODHGFIKJSDFOHGIKJSDFHKFDSJHSDFKJHDFSKJLHFDSLKJHDSFKLjhsdfLKJFS
-    ///////////////// NO OLVIDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAR
+    pid = activeThreads->Add(this);
 #endif
 }
 
@@ -84,6 +81,7 @@ Thread::~Thread()
 // }
 #ifdef USER_PROGRAM
     delete openFiles;
+    activeThreads->Remove(pid);
 #endif
 }
 

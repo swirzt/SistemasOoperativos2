@@ -191,6 +191,9 @@ public:
 
     // User code this thread is running.
     AddressSpace *space;
+
+    // PID of this thread
+    int pid;
 #endif
 };
 

@@ -37,6 +37,8 @@ extern Machine *machine; // User program memory and registers.
 extern SynchConsole *synchconsole;
 #include "lib/bitmap.hh"
 extern Bitmap *pages;
+#include "lib/table.hh"
+extern Table<Thread *> *activeThreads;
 #endif
 
 #ifdef FILESYS_NEEDED // *FILESYS* or *FILESYS_STUB*.

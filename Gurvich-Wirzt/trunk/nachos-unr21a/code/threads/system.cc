@@ -13,6 +13,7 @@
 #include "userprog/exception.hh"
 #include "userprog/synch_console.hh"
 #include "lib/bitmap.hh"
+#include "lib/table.hh"
 #endif
 
 #include <stdlib.h>
@@ -46,6 +47,7 @@ SynchDisk *synchDisk;
 Machine *machine;   ///< User program memory and registers.
 SynchConsole *synchconsole;
 Bitmap *pages;
+Table<Thread *> *activeThreads;
 #endif
 
 #ifdef NETWORK
@@ -240,6 +242,10 @@ void Initialize(int argc, char **argv)
         timer = new Timer(TimerInterruptHandler, 0, false); //Esto implementa las rebanadas de tiempo, false le dice que sean fijas
     }
 
+#ifdef USER_PROGRAM
+    activeThreads = new Table<Thread *>();
+#endif
+
     threadToBeDestroyed = nullptr;
 
     // We did not explicitly allocate the current thread we are running in.
@@ -295,6 +301,7 @@ void Cleanup()
     delete machine;
     delete synchconsole;
     delete pages;
+    delete activeThreads;
 #endif
 
 #ifdef FILESYS_NEEDED
