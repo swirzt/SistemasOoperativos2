@@ -60,6 +60,15 @@ DefaultHandler(ExceptionType et)
     ASSERT(false);
 }
 
+// Initializes a forked thread
+void initialize(void *args)
+{
+    currentThread->space->InitRegisters(); //Initialize registers
+    currentThread->space->RestoreState();  //Copy the father's state
+
+    machine->Run(); //Run the program
+}
+
 /// Handle a system call exception.
 ///
 /// * `et` is the kind of exception.  The list of possible exceptions is in
@@ -106,7 +115,6 @@ SyscallHandler(ExceptionType _et)
                   FILE_NAME_MAX_LEN);
             break;
         }
-        printf("Ayudaaaaa %s\n", filename);
         DEBUG('e', "`Create` requested for file `%s`.\n", filename);
         ASSERT(fileSystem->Create(filename, 0));
         DEBUG('e', "Succesfully created a new file with name %s \n", filename);
@@ -192,7 +200,7 @@ SyscallHandler(ExceptionType _et)
         ASSERT(size > 0);
         ASSERT(id >= 0);
 
-        char bufferSys[size + 1];
+        char bufferSys[size];
         ReadBufferFromUser(bufferUsr, bufferSys, size);
         DEBUG('e', "Quiero escribir en %d\n", id);
         switch (id)
@@ -213,10 +221,10 @@ SyscallHandler(ExceptionType _et)
 
         default:
 
-            DEBUG('e', "Requested to read from file %d\n", id);
+            DEBUG('e', "Requested to write to file %d\n", id);
             OpenFile *file = currentThread->getFile(id);
             bytesWritten = file->Write(bufferSys, size);
-            DEBUG('e', "Read from file: %s \n", bufferSys);
+            // DEBUG('e', "Wrote to file: %s \n", bufferSys);
             break;
         }
         machine->WriteRegister(2, bytesWritten);
@@ -276,12 +284,69 @@ SyscallHandler(ExceptionType _et)
         break;
     }
 
-    case SC_CLOSE: //Preguntar como devolver un valor
+    case SC_CLOSE:
     {
         int fid = machine->ReadRegister(4);
         DEBUG('e', "`Close` requested for id %u.\n", fid);
         currentThread->removeFile(fid);
         machine->WriteRegister(2, 0);
+        break;
+    }
+
+    case SC_JOIN:
+    {
+        SpaceId id = machine->ReadRegister(4);
+        if (!activeThreads->HasKey(id))
+        {
+            DEBUG('e', "Thread does not exist\n");
+            machine->WriteRegister(2, -1);
+        }
+        else
+        {
+            Thread *hilo = activeThreads->Get(id);
+            int status = hilo->Join();
+            machine->WriteRegister(2, status);
+        }
+        break;
+    }
+
+    case SC_EXEC:
+    {
+
+        DEBUG('e', "Exec requested \n");
+        int filenameAddr = machine->ReadRegister(4);
+        char **args if (filenameAddr == 0)
+        {
+            DEBUG('e', "Error: address to filename string is null.\n");
+            machine->WriteRegister(2, -1);
+            break;
+        }
+
+        char filename[FILE_NAME_MAX_LEN + 1];
+        if (!ReadStringFromUser(filenameAddr,
+                                filename, sizeof filename))
+        {
+            DEBUG('e', "Error: filename string too long (maximum is %u bytes).\n",
+                  FILE_NAME_MAX_LEN);
+            break;
+        }
+
+        OpenFile *archivo = fileSystem->Open(filename);
+
+        if (archivo == nullptr)
+        {
+            DEBUG('e', "Invalid file \n");
+            machine->WriteRegister(2, -1);
+        }
+        else
+        {
+            Thread *hilo = new Thread(filename, true);
+            AddressSpace *memoria = new AddressSpace(archivo);
+            hilo->space = memoria;
+            hilo->Fork(initialize, nullptr);
+            delete archivo;
+            machine->WriteRegister(2, hilo->pid);
+        }
         break;
     }
 
