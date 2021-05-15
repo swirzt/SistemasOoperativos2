@@ -18,7 +18,7 @@ public:
 private:
     List<Condition *> *emisores;
     List<Condition *> *receptores;
-    List<int *> *mensajes;
+    List<int *> *buzon;
     Lock *lockER;
     const char *name;
 };

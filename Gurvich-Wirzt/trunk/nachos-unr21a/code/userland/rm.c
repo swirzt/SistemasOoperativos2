@@ -3,11 +3,6 @@
 
 int main(int argc, char **argv)
 {
-    Write(&argc, sizeof(int), 1);
-    if (argc == 3)
-        putsNachos("Convención normal segun santi");
-    if (argc == 1)
-        putsNachos("Solo recibe el argumento rmrmrmr");
     if (argc != 2)
     {
         putsNachos("Argumentos incorrectos");

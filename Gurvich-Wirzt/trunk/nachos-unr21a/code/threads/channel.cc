@@ -7,7 +7,7 @@ Channel::Channel(const char *debugname)
 {
     name = debugname;
     lockER = new Lock(name);
-    mensajes = new List<int *>;
+    buzon = new List<int *>;
     emisores = new List<Condition *>;
     receptores = new List<Condition *>;
 }
@@ -15,7 +15,7 @@ Channel::Channel(const char *debugname)
 Channel::~Channel()
 {
     delete lockER;
-    delete mensajes;
+    delete buzon;
     delete emisores;
     delete receptores;
 }
@@ -40,7 +40,7 @@ void Channel::Send(int message)
     delete emisor;
     DEBUG('t', "Thread: %s, going to send\n", currentThread->GetName());
     Condition *receptor = receptores->Pop();
-    int *buffer = mensajes->Pop();
+    int *buffer = buzon->Pop();
     *buffer = message;
     receptor->Signal();
     lockER->Release();
@@ -53,7 +53,7 @@ void Channel::Receive(int *message)
     lockER->Acquire();
     Condition *receptor = new Condition(currentThread->GetName(), lockER);
     receptores->Append(receptor);
-    mensajes->Append(message);
+    buzon->Append(message);
     if (!emisores->IsEmpty())
     {
         DEBUG('t', "Thread: %s, signaling emisor\n", currentThread->GetName());

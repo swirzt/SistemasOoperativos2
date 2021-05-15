@@ -26,66 +26,21 @@ void reverse(char *s, unsigned i, unsigned j)
         swap(&s[i++], &s[j--]);
 }
 
-void move1(char *s, unsigned size)
-{
-    for (unsigned i = size; i > 0; i--)
-        s[i] = s[i - 1];
-}
-
-// void itoa(int n, char *str)
-// {
-//     int negativo = n < 0;
-//     if (negativo)
-//         n = -n;
-//     int i = 0;
-//     int finished = 0;
-//     while (!finished)
-//     {
-//         int m = n % 10;
-//         str[i++] = m + 48;
-
-//         if (m == n)
-//         {
-//             reverse(str, 0, i);
-//             finished = 1;
-//         }
-//         n = n / 10;
-//     }
-//     if (negativo)
-//     {
-//         move1(str, i++);
-//         str[0] = '-';
-//     }
-//     str[i] = '\0';
-//     // putsNachos("ITOA\n");
-//     // putsNachos(str);
-// }
-
-static int abs(int n)
-{
-    if (n < 0)
-        return -n;
-    return n;
-}
-
-// No la usamos
 void itoa(int n, char *str)
 {
-
-    int base = 10;
-    int nvalue = abs(n);
+    int m = n < 0 ? -n : n;
 
     int i = 0, r = 0;
-    while (nvalue)
+    while (m)
     {
-        r = nvalue % base;
+        r = m % 10;
 
         if (r >= 10)
             str[i++] = 65 + (r - 10);
         else
             str[i++] = 48 + r;
 
-        nvalue = nvalue / base;
+        m = m / 10;
     }
 
     if (i == 0)

@@ -381,6 +381,9 @@ SyscallHandler(ExceptionType _et)
         break;
     }
 
+    //No funciona el Join porque no tenemos las correcciones de la plancha 2
+    //No sabemos cual es el problema con thread->join() y todavia no nos llegaron las correcciones
+    //Nuestro grupo fue uno de los que no llegaron a corregir antes que se entregue esta plancha
     case SC_JOIN:
     {
         SpaceId id = machine->ReadRegister(4);

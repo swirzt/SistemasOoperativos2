@@ -141,7 +141,8 @@ int main(void)
         else
         {
             const SpaceId newProc = Exec(line, argv, 1);
-            Join(newProc);
+            if (newProc >= 0)
+                Join(newProc);
         }
 
         // TODO: is it necessary to check for errors after `Join` too, or
