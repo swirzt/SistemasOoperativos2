@@ -24,6 +24,7 @@
 #include "syscall.h"
 #include "filesys/directory_entry.hh"
 #include "threads/system.hh"
+#include "args.hh"
 
 #include <stdio.h>
 
@@ -66,6 +67,15 @@ void initialize(void *args)
     currentThread->space->InitRegisters(); //Initialize registers
     currentThread->space->RestoreState();  //Copy the father's state
 
+    if (args != nullptr)
+    {
+        unsigned argc = WriteArgs((char **)args);
+        machine->WriteRegister(4, argc);
+        int sp = machine->ReadRegister(STACK_REG);
+        machine->WriteRegister(5, sp);
+        machine->WriteRegister(STACK_REG, sp - 24); // Restamos 24 como nos recomienda el archivo args.hh
+    }
+
     machine->Run(); //Run the program
 }
 
@@ -105,6 +115,8 @@ SyscallHandler(ExceptionType _et)
         if (filenameAddr == 0)
         {
             DEBUG('e', "Error: address to filename string is null.\n");
+            machine->WriteRegister(2, -1);
+            break;
         }
 
         char filename[FILE_NAME_MAX_LEN + 1];
@@ -113,20 +125,32 @@ SyscallHandler(ExceptionType _et)
         {
             DEBUG('e', "Error: filename string too long (maximum is %u bytes).\n",
                   FILE_NAME_MAX_LEN);
+            machine->WriteRegister(2, -1);
             break;
         }
         DEBUG('e', "`Create` requested for file `%s`.\n", filename);
-        ASSERT(fileSystem->Create(filename, 0));
-        DEBUG('e', "Succesfully created a new file with name %s \n", filename);
+        if (fileSystem->Create(filename, 0))
+        {
+            DEBUG('e', "Succesfully created a new file with name %s \n", filename);
+            machine->WriteRegister(2, 0);
+        }
+        else
+        {
+            DEBUG('e', "Error when creating a new file with name %s \n", filename);
+            machine->WriteRegister(2, -1);
+        }
         break;
     }
 
     case SC_REMOVE:
     {
+        DEBUG('e', "Starting to remove file \n");
         int filenameAddr = machine->ReadRegister(4);
         if (filenameAddr == 0)
         {
             DEBUG('e', "Error: address to filename string is null.\n");
+            machine->WriteRegister(2, -1);
+            break;
         }
 
         char filename[FILE_NAME_MAX_LEN + 1];
@@ -135,13 +159,21 @@ SyscallHandler(ExceptionType _et)
         {
             DEBUG('e', "Error: filename string too long (maximum is %u bytes).\n",
                   FILE_NAME_MAX_LEN);
+            machine->WriteRegister(2, -1);
             break;
         }
 
         DEBUG('e', "Remove requested for file `%s`.\n", filename);
-        ASSERT(fileSystem->Remove(filename));
-        DEBUG('e', "Succesfully removed file with name %s \n", filename);
-
+        if (fileSystem->Remove(filename))
+        {
+            DEBUG('e', "Succesfully removed file with name %s \n", filename);
+            machine->WriteRegister(2, 0);
+        }
+        else
+        {
+            DEBUG('e', "Error when removing file with name %s \n", filename);
+            machine->WriteRegister(2, -1);
+        }
         break;
     }
 
@@ -150,11 +182,23 @@ SyscallHandler(ExceptionType _et)
 
         int bufferUsr = machine->ReadRegister(4);
         int size = machine->ReadRegister(5);
-        int bytesRead;
         OpenFileId id = machine->ReadRegister(6);
 
-        ASSERT(size > 0);
-        ASSERT(id >= 0);
+        int bytesRead;
+
+        if (id < 0)
+        {
+            DEBUG('e', "File id non existant \n");
+            machine->WriteRegister(2, 0);
+            break;
+        }
+
+        if (size <= 0)
+        {
+            DEBUG('e', "Read size incorrect\n");
+            machine->WriteRegister(2, 0);
+            break;
+        }
 
         char bufferSys[size];
         switch (id)
@@ -165,6 +209,8 @@ SyscallHandler(ExceptionType _et)
             synchconsole->ReadBuffer(bufferSys, size);
             DEBUG('e', "Read from console: %s \n", bufferSys);
             bytesRead = size;
+            if (bytesRead != 0)
+                WriteBufferToUser(bufferSys, bufferUsr, bytesRead);
             break;
         }
         case CONSOLE_OUTPUT:
@@ -176,14 +222,22 @@ SyscallHandler(ExceptionType _et)
         default:
         {
             DEBUG('e', "Requested to read from file %d\n", id);
-            OpenFile *file = currentThread->getFile(id);
-            bytesRead = file->Read(bufferSys, size);
-            DEBUG('e', "Read from file: %s \n", bufferSys);
+            if (!currentThread->fileExists(id))
+            {
+                DEBUG('e', "File non existant \n");
+                bytesRead = 0;
+            }
+            else
+            {
+                OpenFile *file = currentThread->getFile(id);
+                bytesRead = file->Read(bufferSys, size);
+                if (bytesRead != 0)
+                    WriteBufferToUser(bufferSys, bufferUsr, bytesRead);
+                DEBUG('e', "Read from file: %s \n", bufferSys);
+            }
             break;
         }
         }
-
-        WriteBufferToUser(bufferSys, bufferUsr, bytesRead);
 
         machine->WriteRegister(2, bytesRead);
         break;
@@ -197,12 +251,22 @@ SyscallHandler(ExceptionType _et)
         int bytesWritten;
         OpenFileId id = machine->ReadRegister(6);
 
-        ASSERT(size > 0);
-        ASSERT(id >= 0);
+        if (id < 0)
+        {
+            DEBUG('e', "File id non existant \n");
+            machine->WriteRegister(2, 0);
+            break;
+        }
+
+        if (size <= 0)
+        {
+            DEBUG('e', "Write size incorrect\n");
+            machine->WriteRegister(2, 0);
+            break;
+        }
 
         char bufferSys[size];
         ReadBufferFromUser(bufferUsr, bufferSys, size);
-        DEBUG('e', "Quiero escribir en %d\n", id);
         switch (id)
         {
         case CONSOLE_INPUT:
@@ -222,9 +286,17 @@ SyscallHandler(ExceptionType _et)
         default:
 
             DEBUG('e', "Requested to write to file %d\n", id);
-            OpenFile *file = currentThread->getFile(id);
-            bytesWritten = file->Write(bufferSys, size);
-            // DEBUG('e', "Wrote to file: %s \n", bufferSys);
+            if (!currentThread->fileExists(id))
+            {
+                DEBUG('e', "File non existant \n");
+                bytesWritten = 0;
+            }
+            else
+            {
+                OpenFile *file = currentThread->getFile(id);
+                bytesWritten = file->Write(bufferSys, size);
+                DEBUG('e', "Write to file: %s \n", bufferSys);
+            }
             break;
         }
         machine->WriteRegister(2, bytesWritten);
@@ -263,7 +335,6 @@ SyscallHandler(ExceptionType _et)
         {
             DEBUG('e', "FileName too big \n");
             machine->WriteRegister(2, -1);
-            break;
         }
         else
         {
@@ -271,8 +342,17 @@ SyscallHandler(ExceptionType _et)
             if (archivo != nullptr)
             {
                 OpenFileId id = currentThread->createFile(archivo);
-                DEBUG('e', "Guardamos el archivo %d\n", id);
-                machine->WriteRegister(2, id);
+                if (id == -1)
+                {
+                    DEBUG('e', "Can't save file\n");
+                    delete archivo; // Lo eliminamos porque no lo vamos a usar
+                    machine->WriteRegister(2, -1);
+                }
+                else
+                {
+                    DEBUG('e', "Opened file id: %d\n", id);
+                    machine->WriteRegister(2, id);
+                }
             }
             else
             {
@@ -280,7 +360,6 @@ SyscallHandler(ExceptionType _et)
                 machine->WriteRegister(2, -1);
             }
         }
-
         break;
     }
 
@@ -288,8 +367,17 @@ SyscallHandler(ExceptionType _et)
     {
         int fid = machine->ReadRegister(4);
         DEBUG('e', "`Close` requested for id %u.\n", fid);
-        currentThread->removeFile(fid);
-        machine->WriteRegister(2, 0);
+        if (!currentThread->removeFile(fid))
+        {
+            DEBUG('e', "Can't close file %u", fid);
+            machine->WriteRegister(2, -1);
+        }
+        else
+        {
+            DEBUG('e', "Closed file %u", fid);
+            machine->WriteRegister(2, 0);
+        }
+
         break;
     }
 
@@ -298,13 +386,15 @@ SyscallHandler(ExceptionType _et)
         SpaceId id = machine->ReadRegister(4);
         if (!activeThreads->HasKey(id))
         {
-            DEBUG('e', "Thread does not exist\n");
+            DEBUG('e', "Thread does not exists\n");
             machine->WriteRegister(2, -1);
         }
         else
         {
+            DEBUG('e', "Started to join thread: %d\n", id);
             Thread *hilo = activeThreads->Get(id);
             int status = hilo->Join();
+            DEBUG('e', "Thread joined\n");
             machine->WriteRegister(2, status);
         }
         break;
@@ -315,7 +405,12 @@ SyscallHandler(ExceptionType _et)
 
         DEBUG('e', "Exec requested \n");
         int filenameAddr = machine->ReadRegister(4);
-        char **args if (filenameAddr == 0)
+        int argsAddr = machine->ReadRegister(5);
+        int joinable = machine->ReadRegister(6);
+        char **args = nullptr;
+        if (argsAddr)
+            args = SaveArgs(argsAddr);
+        if (filenameAddr == 0)
         {
             DEBUG('e', "Error: address to filename string is null.\n");
             machine->WriteRegister(2, -1);
@@ -333,6 +428,8 @@ SyscallHandler(ExceptionType _et)
 
         OpenFile *archivo = fileSystem->Open(filename);
 
+        DEBUG('e', "Filename is %s \n", filename);
+
         if (archivo == nullptr)
         {
             DEBUG('e', "Invalid file \n");
@@ -340,10 +437,12 @@ SyscallHandler(ExceptionType _et)
         }
         else
         {
-            Thread *hilo = new Thread(filename, true);
+            DEBUG('e', "Creating a new thread\n");
+            Thread *hilo = new Thread(filename, joinable);
             AddressSpace *memoria = new AddressSpace(archivo);
             hilo->space = memoria;
-            hilo->Fork(initialize, nullptr);
+            hilo->Fork(initialize, args);
+            DEBUG('e', "Initialized new exec thread \n");
             delete archivo;
             machine->WriteRegister(2, hilo->pid);
         }

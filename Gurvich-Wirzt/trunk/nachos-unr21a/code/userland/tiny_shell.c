@@ -1,27 +1,28 @@
 #include "syscall.h"
 
-
-int
-main(void)
+int main(void)
 {
-    SpaceId    newProc;
-    OpenFileId input  = CONSOLE_INPUT;
+    SpaceId newProc;
+    OpenFileId input = CONSOLE_INPUT;
     OpenFileId output = CONSOLE_OUTPUT;
-    char       prompt[2] = { '-', '-' };
-    char       ch, buffer[60];
-    int        i;
+    char prompt[2] = {'-', '-'};
+    char ch, buffer[60];
+    int i;
 
-    for (;;) {
+    for (;;)
+    {
         Write(prompt, 2, output);
         i = 0;
-        do {
+        do
+        {
             Read(&buffer[i], 1, input);
         } while (buffer[i++] != '\n');
 
         buffer[--i] = '\0';
 
-        if (i > 0) {
-            newProc = Exec(buffer);
+        if (i > 0)
+        {
+            newProc = Exec(buffer, 0, 0);
             Join(newProc);
         }
     }

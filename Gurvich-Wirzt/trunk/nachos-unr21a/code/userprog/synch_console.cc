@@ -74,5 +74,6 @@ void SynchConsole::ReadBuffer(char *buffer, int size)
     {
         ReadChar(buffer + i);
     }
+    DEBUG('e', "Lo que lei de la consola fue %c \n", buffer);
     lockRead->Release();
 }

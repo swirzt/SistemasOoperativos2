@@ -178,10 +178,13 @@ public:
     int createFile(OpenFile *file);
 
     // Removes a file descriptor from open files
-    OpenFile *removeFile(int fileNumber);
+    bool removeFile(int fileNumber);
 
     // Get a file from open files
     OpenFile *getFile(int fileNumber);
+
+    // Check if a file exists for the thread
+    bool fileExists(int fileNumber);
 
     // Save user-level register state.
     void SaveUserState();

@@ -10,23 +10,23 @@
 
 #include "syscall.h"
 
-//int
-//main(void)
-//{
-//    Create("test.txt");
-//    OpenFileId o = Open("test.txt");
-//    Write("Hello world\n",12,o);
-//    Close(o);
-//    return 0;
-//}
-
-int main(void)
+int
+main(void)
 {
     Create("test.txt");
     OpenFileId o = Open("test.txt");
-    Write("Hello world\n", 12, o);
+    Write("Hello world\n",12,o);
     Close(o);
-    Write("Test\n", 6, 1);
-    Halt();
     return 0;
 }
+
+//int main(void)
+//{
+//    Create("test.txt");
+//    OpenFileId o = Open("test.txt");
+//    Write("Hello world\n", 12, o);
+//    Close(o);
+//    Write("Test\n", 6, 1);
+//    Halt();
+//    return 0;
+//}

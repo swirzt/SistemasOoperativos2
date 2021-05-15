@@ -326,7 +326,7 @@ int Thread::createFile(OpenFile *file)
 }
 
 // Remove an entry in the file table
-OpenFile *Thread::removeFile(int fileNumber)
+bool Thread::removeFile(int fileNumber)
 {
     return openFiles->Remove(fileNumber);
 }
@@ -335,6 +335,12 @@ OpenFile *Thread::removeFile(int fileNumber)
 OpenFile *Thread::getFile(int fileNumber)
 {
     return openFiles->Get(fileNumber);
+}
+
+//Check if a file exists
+bool Thread::fileExists(int filenumber)
+{
+    return openFiles->HasKey(filenumber);
 }
 
 /// Save the CPU state of a user program on a context switch.
