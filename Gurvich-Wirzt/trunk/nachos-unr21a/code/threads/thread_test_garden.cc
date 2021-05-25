@@ -42,7 +42,7 @@ void ThreadTestGarden()
         sprintf(name, "Turnstile %u", i);
         unsigned *n = new unsigned;
         *n = i;
-        Thread *t = new Thread(name, true);
+        Thread *t = new Thread(name, true, 0);
         t->Fork(Turnstile, (void *)n);
         listaHijos->Append(t);
     }
@@ -96,7 +96,7 @@ void ThreadTestGardenSem()
         unsigned *n = new unsigned;
         *n = i;
         DEBUG('t', "Creating fork %ld\n", i);
-        Thread *t = new Thread(name, true);
+        Thread *t = new Thread(name, true, 0);
         t->Fork(Turnstile2, (void *)n);
         listaHijos->Append(t);
     }

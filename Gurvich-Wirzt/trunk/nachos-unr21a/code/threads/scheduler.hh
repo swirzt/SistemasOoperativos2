@@ -39,6 +39,8 @@ public:
     // Print contents of ready list.
     void Print();
 
+    void UpdatePriority(Thread *thread);
+
 private:
     // Queue of threads that are ready to run, but not running.
     List<Thread *> *readyList[COLAS];

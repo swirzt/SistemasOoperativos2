@@ -186,7 +186,7 @@ PostOffice::PostOffice(NetworkAddress addr, double reliability, int nBoxes)
 
     // Finally, create a thread whose sole job is to wait for incoming
     // messages, and put them in the right mailbox.
-    Thread *t = new Thread("postal worker", false);
+    Thread *t = new Thread("postal worker", false, 0);
 
     t->Fork(PostalHelper, this);
 }

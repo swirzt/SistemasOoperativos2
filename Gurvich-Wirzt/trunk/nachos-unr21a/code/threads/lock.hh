@@ -58,7 +58,7 @@ private:
 
     // Add other needed fields here.
     Semaphore *sem;
-    const char *holder;
+    Thread *holder;
     int holderPriority;
 };
 

@@ -98,7 +98,7 @@ private:
 
 public:
     /// Initialize a `Thread`.
-    Thread(const char *debugName, bool join);
+    Thread(const char *debugName, bool join, int priority);
 
     /// Deallocate a Thread.
     ///

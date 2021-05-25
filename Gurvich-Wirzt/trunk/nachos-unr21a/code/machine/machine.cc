@@ -7,10 +7,8 @@
 /// All rights reserved.  See `copyright.h` for copyright notice and
 /// limitation of liability and disclaimer of warranty provisions.
 
-
 #include "machine.hh"
 #include "threads/system.hh"
-
 
 static inline bool
 IsExceptionType(ExceptionType t)
@@ -23,8 +21,9 @@ IsExceptionType(ExceptionType t)
 static void
 CheckEndian()
 {
-    union checkIt {
-        char     charWord[4];
+    union checkIt
+    {
+        char charWord[4];
         unsigned intWord;
     } check;
 
@@ -47,11 +46,13 @@ CheckEndian()
 ///   execute normally, without single stepping.
 Machine::Machine(SingleStepper *st)
 {
-    for (unsigned i = 0; i < NUM_TOTAL_REGS; i++) {
+    for (unsigned i = 0; i < NUM_TOTAL_REGS; i++)
+    {
         registers[i] = 0;
     }
 
-    for (unsigned i = 0; i < NUM_EXCEPTION_TYPES; i++) {
+    for (unsigned i = 0; i < NUM_EXCEPTION_TYPES; i++)
+    {
         handlers[i] = nullptr;
     }
 
@@ -65,48 +66,46 @@ Machine::GetRegisters() const
     return registers;
 }
 
-MMU *
-Machine::GetMMU()
+MMU *Machine::GetMMU()
 {
     return &mmu;
 }
 
 /// Fetch or write the contents of a user program register.
-int
-Machine::ReadRegister(unsigned num) const
+int Machine::ReadRegister(unsigned num) const
 {
     ASSERT(num < NUM_TOTAL_REGS);
     return registers[num];
 }
 
-void
-Machine::WriteRegister(unsigned num, int value)
+void Machine::WriteRegister(unsigned num, int value)
 {
     ASSERT(num < NUM_TOTAL_REGS);
     //DEBUG('m', "WriteRegister %u, value %d\n", num, value);
 
     // Register 0 never changes its value: it is always 0.
-    if (num != 0) {
+    if (num != 0)
+    {
         registers[num] = value;
     }
 }
 
-bool
-Machine::ReadMem(unsigned addr, unsigned size, int *value)
+bool Machine::ReadMem(unsigned addr, unsigned size, int *value)
 {
     ExceptionType e = mmu.ReadMem(addr, size, value);
-    if (e != NO_EXCEPTION) {
+    if (e != NO_EXCEPTION)
+    {
         RaiseException(e, addr);
         return false;
     }
     return true;
 }
 
-bool
-Machine::WriteMem(unsigned addr, unsigned size, int value)
+bool Machine::WriteMem(unsigned addr, unsigned size, int value)
 {
     ExceptionType e = mmu.WriteMem(addr, size, value);
-    if (e != NO_EXCEPTION) {
+    if (e != NO_EXCEPTION)
+    {
         RaiseException(e, addr);
         return false;
     }
@@ -119,17 +118,16 @@ Machine::WriteMem(unsigned addr, unsigned size, int value)
 ///
 /// * `et` is the cause of the kernel trap
 /// * `badVaddr` is the virtual address causing the trap, if appropriate.
-void
-Machine::RaiseException(ExceptionType et, unsigned badVAddr)
+void Machine::RaiseException(ExceptionType et, unsigned badVAddr)
 {
     ASSERT(IsExceptionType(et));
-    ASSERT(handlers[et] != nullptr);  // There must be a handler associated.
+    ASSERT(handlers[et] != nullptr); // There must be a handler associated.
 
     DEBUG('m', "Exception: %s\n", ExceptionTypeToString(et));
 
     //ASSERT(interrupt->GetStatus() == USER_MODE);
     registers[BAD_VADDR_REG] = badVAddr;
-    DelayedLoad(0, 0);  // Finish anything in progress.
+    DelayedLoad(0, 0); // Finish anything in progress.
 
     // Call the associated handler with interrupts enabled in system mode.
     interrupt->SetStatus(SYSTEM_MODE);
@@ -137,8 +135,7 @@ Machine::RaiseException(ExceptionType et, unsigned badVAddr)
     interrupt->SetStatus(USER_MODE);
 }
 
-void
-Machine::SetHandler(ExceptionType et, ExceptionHandler handler)
+void Machine::SetHandler(ExceptionType et, ExceptionHandler handler)
 {
     ASSERT(IsExceptionType(et));
     ASSERT(handler != nullptr);

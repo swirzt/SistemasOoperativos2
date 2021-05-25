@@ -145,6 +145,18 @@ void Scheduler::Run(Thread *nextThread)
 #endif
 }
 
+void Scheduler::UpdatePriority(Thread *hilo)
+{
+    for (int i = COLAS - 1; i >= 0; i--)
+    {
+        if (readyList[i]->Has(hilo))
+        {
+            readyList[i]->Remove(hilo);
+            readyList[hilo->GetPrio()]->Append(hilo);
+            break; // para evitar hacer 2 veces lo mismo
+        }
+    }
+}
 /// Print the scheduler state -- in other words, the contents of the ready
 /// list.
 ///

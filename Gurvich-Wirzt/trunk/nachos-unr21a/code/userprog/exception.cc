@@ -441,7 +441,7 @@ SyscallHandler(ExceptionType _et)
         else
         {
             DEBUG('e', "Creating a new thread\n");
-            Thread *hilo = new Thread(filename, joinable);
+            Thread *hilo = new Thread(filename, joinable, 0);
             AddressSpace *memoria = new AddressSpace(archivo);
             hilo->space = memoria;
             hilo->Fork(initialize, args);
@@ -460,14 +460,31 @@ SyscallHandler(ExceptionType _et)
     IncrementPC();
 }
 
+unsigned int tlbSelection = 0;
+
+static void
+PageFaultHandler(ExceptionType _et)
+{
+    int addr = machine->ReadRegister(BAD_VADDR_REG);
+    int vpn = addr % PAGE_SIZE;
+    machine->GetMMU()->tlb[tlbSelection++ % TLB_SIZE] = currentThread->space->pageTable[vpn];
+}
+
+static void ReadOnlyHandler(ExceptionType _et)
+{
+    DEBUG('e', "Tried to read from a read only page");
+    ASSERT(false); // Esto mata al SO, deberia solo matar al programa que intento?
+    return;
+}
+
 /// By default, only system calls have their own handler.  All other
 /// exception types are assigned the default handler.
 void SetExceptionHandlers()
 {
     machine->SetHandler(NO_EXCEPTION, &DefaultHandler);
     machine->SetHandler(SYSCALL_EXCEPTION, &SyscallHandler);
-    machine->SetHandler(PAGE_FAULT_EXCEPTION, &DefaultHandler);
-    machine->SetHandler(READ_ONLY_EXCEPTION, &DefaultHandler);
+    machine->SetHandler(PAGE_FAULT_EXCEPTION, &PageFaultHandler);
+    machine->SetHandler(READ_ONLY_EXCEPTION, &ReadOnlyHandler);
     machine->SetHandler(BUS_ERROR_EXCEPTION, &DefaultHandler);
     machine->SetHandler(ADDRESS_ERROR_EXCEPTION, &DefaultHandler);
     machine->SetHandler(OVERFLOW_EXCEPTION, &DefaultHandler);

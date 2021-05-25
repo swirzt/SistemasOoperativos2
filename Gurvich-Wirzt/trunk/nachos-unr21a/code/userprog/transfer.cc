@@ -18,7 +18,14 @@ void ReadBufferFromUser(int userAddress, char *outBuffer,
     {
         int temp;
         count++;
-        ASSERT(machine->ReadMem(userAddress++, 1, &temp));
+        bool read = machine->ReadMem(userAddress, 1, &temp);
+#ifdef USE_TLB //Si hay TLB tenemos que hacer 2 intentos
+        if (!read)
+            ASSERT(machine->ReadMem(userAddress, 1, &temp));
+#else //Si no hay TLB no hay que reintentar
+        ASSERT(read);
+#endif
+        userAddress++;
         *outBuffer = (unsigned char)temp;
         outBuffer++; // Podría ponerlo en la línea de arriba pero tengo un presentimiento de que se va a romper
     } while (count < byteCount);
@@ -36,7 +43,14 @@ bool ReadStringFromUser(int userAddress, char *outString,
     {
         int temp;
         count++;
-        ASSERT(machine->ReadMem(userAddress++, 1, &temp));
+        bool read = machine->ReadMem(userAddress, 1, &temp);
+#ifdef USE_TLB //Si hay TLB tenemos que hacer 2 intentos
+        if (!read)
+            ASSERT(machine->ReadMem(userAddress, 1, &temp));
+#else //Si no hay TLB no hay que reintentar
+        ASSERT(read);
+#endif
+        userAddress++;
         *outString = (unsigned char)temp;
     } while (*outString++ != '\0' && count < maxByteCount);
 
@@ -56,7 +70,14 @@ void WriteBufferToUser(const char *buffer, int userAddress,
         int temp;
         temp = (const char)*buffer;
         count++;
-        ASSERT(machine->WriteMem(userAddress++, 1, temp));
+        bool read = machine->WriteMem(userAddress++, 1, temp);
+#ifdef USE_TLB //Si hay TLB tenemos que hacer 2 intentos
+        if (!read)
+            ASSERT(machine->WriteMem(userAddress, 1, temp));
+#else //Si no hay TLB no hay que reintentar
+        ASSERT(read);
+#endif
+        userAddress++;
         buffer++; // Podría ponerlo en la línea de arriba pero tengo un presentimiento de que se va a romper
     } while (count < byteCount);
 }
@@ -72,6 +93,13 @@ void WriteStringToUser(const char *string, int userAddress)
         int temp;
         temp = (const char)*string;
         count++;
-        ASSERT(machine->WriteMem(userAddress++, 1, temp));
+        bool read = machine->WriteMem(userAddress++, 1, temp);
+#ifdef USE_TLB //Si hay TLB tenemos que hacer 2 intentos
+        if (!read)
+            ASSERT(machine->WriteMem(userAddress, 1, temp));
+#else //Si no hay TLB no hay que reintentar
+        ASSERT(read);
+#endif
+        userAddress++;
     } while (*string++ != '\0');
 }

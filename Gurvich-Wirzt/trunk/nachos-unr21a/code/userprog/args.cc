@@ -24,7 +24,12 @@ static inline bool CountArgsToSave(int address, unsigned *count)
     unsigned c = 0;
     do
     {
+#ifdef USE_TLB //Si se usa TLB tratamos de leer 2 veces
+        if (!machine->ReadMem(address + 4 * c, 4, &val))
+            machine->ReadMem(address + 4 * c, 4, &val);
+#else
         machine->ReadMem(address + 4 * c, 4, &val);
+#endif
         c++;
     } while (c < MAX_ARG_COUNT && val != 0);
     if (c == MAX_ARG_COUNT && val != 0)
@@ -61,7 +66,13 @@ SaveArgs(int address)
         args[i] = new char[MAX_ARG_LENGTH];
         int strAddr;
         // For each pointer, read the corresponding string.
+#ifdef USE_TLB //Si se usa TLB tratamos de leer 2 veces
+        if (!machine->ReadMem(address + i * 4, 4, &strAddr))
+            machine->ReadMem(address + i * 4, 4, &strAddr);
+#else
         machine->ReadMem(address + i * 4, 4, &strAddr);
+#endif
+
         ReadStringFromUser(strAddr, args[i], MAX_ARG_LENGTH);
     }
     args[count] = nullptr; // Write the trailing null.
@@ -101,9 +112,21 @@ WriteArgs(char **args)
     // Write each argument's address.
     for (unsigned i = 0; i < c; i++)
     {
+#ifdef USE_TLB //Si se usa TLB tratamos de leer 2 veces
+        if (!machine->WriteMem(sp + 4 * i, 4, argsAddress[i]))
+            machine->WriteMem(sp + 4 * i, 4, argsAddress[i]);
+#else
         machine->WriteMem(sp + 4 * i, 4, argsAddress[i]);
+#endif
     }
-    machine->WriteMem(sp + 4 * c, 4, 0); // The last is null.
+
+#ifdef USE_TLB //Si se usa TLB tratamos de leer 2 veces
+    if (!machine->WriteMem(sp + 4 * c, 4, 0))
+        machine->WriteMem(sp + 4 * c, 4, 0);
+#else
+    machine->WriteMem(sp + 4 * c, 4, 0);
+#endif
+
     machine->WriteRegister(STACK_REG, sp);
     return c;
 }

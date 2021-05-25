@@ -161,6 +161,13 @@ void AddressSpace::SaveState()
 /// For now, tell the machine where to find the page table.
 void AddressSpace::RestoreState()
 {
+#ifndef USE_TLB
   machine->GetMMU()->pageTable = pageTable;
   machine->GetMMU()->pageTableSize = numPages;
+#else
+  for (unsigned i = 0; i < TLB_SIZE; i++) //Invalidamos el estdo de cada entrada de la TLB
+  {
+    machine->GetMMU()->tlb[i].valid = false;
+  }
+#endif
 }

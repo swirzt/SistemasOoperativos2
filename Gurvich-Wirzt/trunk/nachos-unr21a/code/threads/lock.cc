@@ -44,21 +44,27 @@ Lock::GetName() const
 void Lock::Acquire()
 {
     ASSERT(!IsHeldByCurrentThread());
-    holder = currentThread->GetName();
-    holderPriority = currentThread->GetPrio();
-    currentThread->SetPrio(COLAS - 1);
+    int prio = currentThread->GetPrio();
+    if (holder != nullptr && holder->GetPrio() < prio)
+    {
+        holder->SetPrio(prio);
+        scheduler->UpdatePriority(holder);
+    }
     sem->P();
+    holder = currentThread;
+    holderPriority = prio;
 }
 
 void Lock::Release()
 {
     ASSERT(IsHeldByCurrentThread());
-    holder = nullptr;
     currentThread->SetPrio(holderPriority);
+    scheduler->UpdatePriority(currentThread);
+    holder = nullptr;
     sem->V();
 }
 
 bool Lock::IsHeldByCurrentThread() const
 {
-    return holder == currentThread->GetName();
+    return holder == currentThread;
 }
