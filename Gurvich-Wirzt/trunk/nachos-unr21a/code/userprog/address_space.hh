@@ -15,6 +15,7 @@
 
 #include "filesys/file_system.hh"
 #include "machine/translation_entry.hh"
+#include "executable.hh"
 
 const unsigned USER_STACK_SIZE = 1024; ///< Increase this as necessary!
 
@@ -47,11 +48,21 @@ public:
     /// Assume linear page table translation for now!
     TranslationEntry *pageTable;
 
+#ifdef DEMAND_LOADING
+    // Loads a page to memory
+    TranslationEntry *LoadPage(int vpn);
+#endif
 private:
     unsigned int Translate(unsigned int virtualAddr);
 
     /// Number of pages in the virtual address space.
     unsigned numPages;
+
+    // Total size of file
+    unsigned int size;
+
+    // Executable file
+    Executable *exe;
 };
 
 #endif

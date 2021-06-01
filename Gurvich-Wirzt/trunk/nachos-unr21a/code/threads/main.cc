@@ -142,8 +142,10 @@ int main(int argc, char **argv)
 #ifdef USER_PROGRAM
         if (!strcmp(*argv, "-x"))
         { // Run a user program.
+            printf("Hola entre equisde\n");
             ASSERT(argc > 1);
             StartProcess(*(argv + 1));
+            printf("Sali\n");
             argCount = 2;
         }
         else if (!strcmp(*argv, "-tc"))

@@ -462,13 +462,17 @@ SyscallHandler(ExceptionType _et)
 
 unsigned int tlbSelection = 0;
 
+#ifdef USE_TLB
 static void
 PageFaultHandler(ExceptionType _et)
 {
     int addr = machine->ReadRegister(BAD_VADDR_REG);
-    int vpn = addr % PAGE_SIZE;
-    machine->GetMMU()->tlb[tlbSelection++ % TLB_SIZE] = currentThread->space->pageTable[vpn];
+    int vpn = addr / PAGE_SIZE;
+    machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = currentThread->space->pageTable[vpn];
+    tlbSelection++;
+    stats->tlbMiss++;
 }
+#endif
 
 static void ReadOnlyHandler(ExceptionType _et)
 {
@@ -483,7 +487,11 @@ void SetExceptionHandlers()
 {
     machine->SetHandler(NO_EXCEPTION, &DefaultHandler);
     machine->SetHandler(SYSCALL_EXCEPTION, &SyscallHandler);
+#ifdef USE_TLB
     machine->SetHandler(PAGE_FAULT_EXCEPTION, &PageFaultHandler);
+#else
+    machine->SetHandler(PAGE_FAULT_EXCEPTION, &DefaultHandler);
+#endif
     machine->SetHandler(READ_ONLY_EXCEPTION, &ReadOnlyHandler);
     machine->SetHandler(BUS_ERROR_EXCEPTION, &DefaultHandler);
     machine->SetHandler(ADDRESS_ERROR_EXCEPTION, &DefaultHandler);

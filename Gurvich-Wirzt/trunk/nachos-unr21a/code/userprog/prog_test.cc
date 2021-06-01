@@ -37,6 +37,7 @@ void StartProcess(const char *filename)
     space->InitRegisters(); // Set the initial register values.
     space->RestoreState();  // Load page table register.
 
+    printf("pase algo");
     machine->Run(); // Jump to the user progam.
     ASSERT(false);  // `machine->Run` never returns; the address space
                     // exits by doing the system call `Exit`.

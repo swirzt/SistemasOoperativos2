@@ -26,12 +26,12 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
 {
   ASSERT(executable_file != nullptr);
 
-  Executable exe(executable_file);
-  ASSERT(exe.CheckMagic());
+  exe = new Executable(executable_file);
+  ASSERT(exe->CheckMagic());
 
   // How big is address space?
 
-  unsigned size = exe.GetSize() + USER_STACK_SIZE;
+  size = exe->GetSize() + USER_STACK_SIZE;
   // We need to increase the size to leave room for the stack.
   numPages = DivRoundUp(size, PAGE_SIZE);
   size = numPages * PAGE_SIZE;
@@ -49,11 +49,16 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
   for (unsigned i = 0; i < numPages; i++)
   {
     pageTable[i].virtualPage = i;
+#ifndef DEMAND_LOADING
     int phy = pages->Find();
     // // Queremos que la máquina cierre por ahora (hasta tener virtual)
     // ASSERT(phy != -1);
     pageTable[i].physicalPage = phy;
     pageTable[i].valid = true;
+#else
+    pageTable[i].physicalPage = -1;
+    pageTable[i].valid = false;
+#endif
     pageTable[i].use = false;
     pageTable[i].dirty = false;
     pageTable[i].readOnly = false;
@@ -72,20 +77,20 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
   }
 
   // Then, copy in the code and data segments into memory.
-  uint32_t codeSize = exe.GetCodeSize();
-  uint32_t initDataSize = exe.GetInitDataSize();
+  uint32_t codeSize = exe->GetCodeSize();
+  uint32_t initDataSize = exe->GetInitDataSize();
   if (codeSize > 0)
   {
     int i = 0;
     uint32_t read = 0;
-    uint32_t virtualAddr = exe.GetCodeAddr();
+    uint32_t virtualAddr = exe->GetCodeAddr();
     // ASSERT(codeSize + virtualAddr <= numPages * PAGE_SIZE); //Quiero ver si puedo leer todo el codigo y me entra en mi espacio asignado
     DEBUG('a', "Initializing code segment, at 0x%X, size %u\n",
           virtualAddr, codeSize);
     while (read < codeSize)
     {
       uint32_t addr = Translate(virtualAddr + i);
-      exe.ReadCodeBlock(&mainMemory[addr], 1, read);
+      exe->ReadCodeBlock(&mainMemory[addr], 1, read);
       read++;
       i++;
     }
@@ -95,20 +100,18 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
   {
     int i = 0;
     uint32_t read = 0;
-    uint32_t virtualAddr = exe.GetInitDataAddr();
+    uint32_t virtualAddr = exe->GetInitDataAddr();
     DEBUG('a', "Initializing data segment, at 0x%X, size %u\n",
           virtualAddr, initDataSize);
     while (read < initDataSize)
     {
       uint32_t addr = Translate(virtualAddr + i);
-      exe.ReadDataBlock(&mainMemory[addr], 1, read);
+      exe->ReadDataBlock(&mainMemory[addr], 1, read);
       read++;
       i++;
     }
-    // exe.ReadDataBlock(&mainMemory[virtualAddr], initDataSize, 0);
   }
 }
-
 /// Deallocate an address space.
 ///
 /// Nothing for now!
@@ -171,3 +174,30 @@ void AddressSpace::RestoreState()
   }
 #endif
 }
+
+#ifdef DEMAND_LOADING
+TranslationEntry *AddressSpace::LoadPage(int vpn)
+{
+  int phy = pages->Find();
+  pageTable[vpn].physicalPage = phy;
+  pageTable[vpn].valid = true;
+  pageTable[vpn].use = false;
+  pageTable[vpn].dirty = false;
+  pageTable[vpn].readOnly = false;
+  memset(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], 0, PAGE_SIZE);
+  if ((vpn * PAGE_SIZE) <= size - USER_STACK_SIZE)
+  {
+    uint32_t codeSize = exe->GetCodeSize();
+    uint32_t virtualAddr = exe->GetCodeAddr();
+    if (vpn * PAGE_SIZE > (codeSize + virtualAddr) / PAGE_SIZE) // esta en data
+    {
+      exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, 0);
+    }
+    else // esta en code
+    {
+      exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, 0);
+    }
+  }
+  // }
+}
+#endif

@@ -30,6 +30,7 @@
 #include "mmu.hh"
 #include "endianness.hh"
 #include "threads/system.hh"
+#include "machine/statistics.hh"
 
 #include <stdio.h>
 
@@ -210,6 +211,9 @@ MMU::RetrievePageEntry(unsigned vpn, TranslationEntry **entry) const
             if (e->valid && e->virtualPage == vpn)
             {
                 *entry = e; // FOUND!
+#ifdef USE_TLB
+                stats->tlbHit++;
+#endif
                 return NO_EXCEPTION;
             }
         }

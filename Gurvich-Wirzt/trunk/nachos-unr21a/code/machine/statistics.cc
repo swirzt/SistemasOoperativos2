@@ -44,7 +44,7 @@ void Statistics::Print()
 // Mi companero dice que nunca son 0 las 2
 // Soy el companero y creo que es asi
 #ifdef USE_TLB
-    printf("TLB: hits %lu, miss %lu, hit ratio %lu\n", tlbHit, tlbMiss, tlbHit / tlbMiss);
+    printf("TLB: hits %lu, miss %lu, hit ratio %.2f\n", (tlbHit - tlbMiss), tlbMiss, ((float)tlbHit - (float)tlbMiss) / (float)tlbHit);
 #endif
     printf("Ticks: total %lu, idle %lu, system %lu, user %lu\n",
            totalTicks, idleTicks, systemTicks, userTicks);
