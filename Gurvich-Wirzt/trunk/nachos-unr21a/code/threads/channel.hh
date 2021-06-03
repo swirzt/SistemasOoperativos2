@@ -1,8 +1,8 @@
 #ifndef NACHOS_THREADS_CHANNEL__HH
 #define NACHOS_THREADS_CHANNEL__HH
 
-#include "condition.hh"
 #include "lock.hh"
+#include "barrier.hh"
 
 class Channel
 {
@@ -16,10 +16,11 @@ public:
     const char *getName();
 
 private:
-    List<Condition *> *emisores;
-    List<Condition *> *receptores;
-    List<int *> *buzon;
-    Lock *lockER;
+    int *buzon;
+    Lock *lockEmisor;
+    Lock *lockReceptor;
+    Barrier *barrera;
+
     const char *name;
 };
 

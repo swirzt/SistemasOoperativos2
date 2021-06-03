@@ -2,7 +2,11 @@
     "files.associations": {
         "ostream": "cpp",
         "fstream": "cpp",
-        "syscall.h": "c"
+        "syscall.h": "c",
+        "array": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "utility": "cpp"
     },
     "C_Cpp.dimInactiveRegions": false
 }
