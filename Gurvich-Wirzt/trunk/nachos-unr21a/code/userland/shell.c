@@ -53,7 +53,6 @@ ReadLine(char *buffer, unsigned size, OpenFileId input)
         if (buffer[i] == '\n')
         {
             buffer[i] = '\0';
-            Write("Lei\n", 4, CONSOLE_OUTPUT);
             break;
         }
     }
@@ -115,9 +114,7 @@ int main(void)
     for (;;)
     {
         WritePrompt(OUTPUT);
-        Write("Hola carola\n", 12, OUTPUT);
         const unsigned lineSize = ReadLine(line, MAX_LINE_SIZE, INPUT);
-        Write("Chau carola\n", 12, OUTPUT);
         if (lineSize == 0)
         {
             continue;
