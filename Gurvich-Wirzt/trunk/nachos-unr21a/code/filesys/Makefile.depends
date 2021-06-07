@@ -13,6 +13,17 @@ main.o: ../threads/main.cc ../threads/copyright.h ../threads/sys_info.hh \
  ../userprog/synch_console.hh ../machine/console.hh ../threads/lock.hh \
  ../threads/semaphore.hh ../threads/semaphore.hh ../lib/bitmap.hh \
  ../filesys/synch_disk.hh ../threads/thread_test.hh
+barrier.o: ../threads/barrier.cc ../threads/barrier.hh \
+ ../threads/condition.hh ../threads/lock.hh ../threads/semaphore.hh \
+ ../threads/thread.hh ../lib/utility.hh ../lib/assert.hh ../lib/debug.hh \
+ ../lib/debug_opts.hh ../machine/system_dep.hh ../machine/machine.hh \
+ ../machine/exception_type.hh ../machine/mmu.hh ../machine/disk.hh \
+ ../machine/translation_entry.hh ../machine/single_stepper.hh \
+ ../userprog/address_space.hh ../filesys/file_system.hh \
+ ../filesys/open_file.hh ../filesys/directory_entry.hh ../machine/disk.hh \
+ ../machine/translation_entry.hh ../userprog/executable.hh ../bin/noff.h \
+ ../filesys/open_file.hh ../lib/table.hh ../lib/list.hh ../lib/utility.hh \
+ ../lib/list.hh
 condition.o: ../threads/condition.cc ../threads/condition.hh \
  ../threads/lock.hh ../threads/semaphore.hh ../threads/thread.hh \
  ../lib/utility.hh ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
@@ -54,18 +65,19 @@ scheduler.o: ../threads/scheduler.cc ../threads/scheduler.hh \
  ../userprog/synch_console.hh ../machine/console.hh ../threads/lock.hh \
  ../threads/semaphore.hh ../threads/semaphore.hh ../lib/bitmap.hh \
  ../filesys/synch_disk.hh
-channel.o: ../threads/channel.cc ../threads/channel.hh \
- ../threads/condition.hh ../threads/lock.hh ../threads/semaphore.hh \
- ../threads/thread.hh ../lib/utility.hh ../lib/assert.hh ../lib/debug.hh \
- ../lib/debug_opts.hh ../machine/system_dep.hh ../machine/machine.hh \
+channel.o: ../threads/channel.cc ../threads/channel.hh ../threads/lock.hh \
+ ../threads/semaphore.hh ../threads/thread.hh ../lib/utility.hh \
+ ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
+ ../machine/system_dep.hh ../machine/machine.hh \
  ../machine/exception_type.hh ../machine/mmu.hh ../machine/disk.hh \
  ../machine/translation_entry.hh ../machine/single_stepper.hh \
  ../userprog/address_space.hh ../filesys/file_system.hh \
  ../filesys/open_file.hh ../filesys/directory_entry.hh ../machine/disk.hh \
  ../machine/translation_entry.hh ../userprog/executable.hh ../bin/noff.h \
  ../filesys/open_file.hh ../lib/table.hh ../lib/list.hh ../lib/utility.hh \
- ../lib/list.hh ../threads/system.hh ../threads/scheduler.hh \
- ../machine/interrupt.hh ../machine/statistics.hh ../machine/timer.hh \
+ ../lib/list.hh ../threads/barrier.hh ../threads/condition.hh \
+ ../threads/system.hh ../threads/scheduler.hh ../machine/interrupt.hh \
+ ../machine/statistics.hh ../machine/timer.hh \
  ../userprog/synch_console.hh ../machine/console.hh ../threads/lock.hh \
  ../threads/semaphore.hh ../lib/bitmap.hh ../filesys/synch_disk.hh
 semaphore.o: ../threads/semaphore.cc ../threads/semaphore.hh \
@@ -121,8 +133,8 @@ thread.o: ../threads/thread.cc ../threads/thread.hh ../lib/utility.hh \
  ../machine/statistics.hh ../machine/timer.hh \
  ../userprog/synch_console.hh ../machine/console.hh ../threads/lock.hh \
  ../threads/semaphore.hh ../threads/semaphore.hh ../lib/bitmap.hh \
- ../filesys/synch_disk.hh ../threads/channel.hh ../threads/condition.hh \
- ../threads/lock.hh
+ ../filesys/synch_disk.hh ../threads/channel.hh ../threads/lock.hh \
+ ../threads/barrier.hh ../threads/condition.hh
 thread_test.o: ../threads/thread_test.cc ../threads/thread_test_garden.hh \
  ../threads/thread_test_prod_cons.hh ../threads/thread_test_simple.hh \
  ../lib/utility.hh ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
@@ -490,6 +502,17 @@ disk.o: ../machine/disk.cc ../machine/disk.hh ../lib/utility.hh \
  ../userprog/synch_console.hh ../machine/console.hh ../threads/lock.hh \
  ../threads/semaphore.hh ../threads/semaphore.hh ../lib/bitmap.hh \
  ../filesys/synch_disk.hh
+barrier.o: ../threads/barrier.hh ../threads/condition.hh \
+ ../threads/lock.hh ../threads/semaphore.hh ../threads/thread.hh \
+ ../lib/utility.hh ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
+ ../machine/system_dep.hh ../machine/machine.hh \
+ ../machine/exception_type.hh ../machine/mmu.hh ../machine/disk.hh \
+ ../machine/translation_entry.hh ../machine/single_stepper.hh \
+ ../userprog/address_space.hh ../filesys/file_system.hh \
+ ../filesys/open_file.hh ../filesys/directory_entry.hh ../machine/disk.hh \
+ ../machine/translation_entry.hh ../userprog/executable.hh ../bin/noff.h \
+ ../filesys/open_file.hh ../lib/table.hh ../lib/list.hh ../lib/utility.hh \
+ ../lib/list.hh
 condition.o: ../threads/condition.hh ../threads/lock.hh \
  ../threads/semaphore.hh ../threads/thread.hh ../lib/utility.hh \
  ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
@@ -512,9 +535,9 @@ lock.o: ../threads/lock.hh ../threads/semaphore.hh ../threads/thread.hh \
  ../machine/translation_entry.hh ../userprog/executable.hh ../bin/noff.h \
  ../filesys/open_file.hh ../lib/table.hh ../lib/list.hh ../lib/utility.hh \
  ../lib/list.hh
-channel.o: ../threads/channel.hh ../threads/condition.hh \
- ../threads/lock.hh ../threads/semaphore.hh ../threads/thread.hh \
- ../lib/utility.hh ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
+channel.o: ../threads/channel.hh ../threads/lock.hh \
+ ../threads/semaphore.hh ../threads/thread.hh ../lib/utility.hh \
+ ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
  ../machine/system_dep.hh ../machine/machine.hh \
  ../machine/exception_type.hh ../machine/mmu.hh ../machine/disk.hh \
  ../machine/translation_entry.hh ../machine/single_stepper.hh \
@@ -522,7 +545,7 @@ channel.o: ../threads/channel.hh ../threads/condition.hh \
  ../filesys/open_file.hh ../filesys/directory_entry.hh ../machine/disk.hh \
  ../machine/translation_entry.hh ../userprog/executable.hh ../bin/noff.h \
  ../filesys/open_file.hh ../lib/table.hh ../lib/list.hh ../lib/utility.hh \
- ../lib/list.hh
+ ../lib/list.hh ../threads/barrier.hh ../threads/condition.hh
 scheduler.o: ../threads/scheduler.hh ../threads/thread.hh \
  ../lib/utility.hh ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
  ../machine/system_dep.hh ../machine/machine.hh \
