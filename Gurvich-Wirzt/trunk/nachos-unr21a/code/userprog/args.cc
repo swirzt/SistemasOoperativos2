@@ -28,6 +28,7 @@ static inline bool CountArgsToSave(int address, unsigned *count)
         if (!machine->ReadMem(address + 4 * c, 4, &val))
             machine->ReadMem(address + 4 * c, 4, &val);
 #else
+        DEBUG('e', "ESTA BASURA ESTA HABILITADA FLKJHBIUPJSDGHBFOJUSDIGFPIUSDJGFPIUSDJGHBFIPUYSDGFBPIKJSDF\n");
         machine->ReadMem(address + 4 * c, 4, &val);
 #endif
         c++;

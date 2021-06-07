@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 {
 	if (argc != 2)
 	{
-		putsNachos("Argumentos incorrectos \n");
+		putsNachos("Argumentos incorrectos\n");
 		Exit(-1);
 	}
 
@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 
 	if (file < 2)
 	{
-		putsNachos("Error abriendo archivo");
+		putsNachos("Error abriendo archivo\n");
 		Exit(-1);
 	}
 
