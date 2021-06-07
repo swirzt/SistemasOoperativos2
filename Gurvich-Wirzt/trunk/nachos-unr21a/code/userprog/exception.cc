@@ -207,7 +207,10 @@ SyscallHandler(ExceptionType _et)
         {
             DEBUG('e', "Requested to read from console\n");
             synchconsole->ReadBuffer(bufferSys, size);
+            char algo = bufferSys[size]; //Esto hace que el debug imprima lindo
+            bufferSys[size] = '\0';
             DEBUG('e', "Read from console: %s \n", bufferSys);
+            bufferSys[size] = algo; // Dejo el buffer como estaba
             bytesRead = size;
             if (bytesRead != 0)
                 WriteBufferToUser(bufferSys, bufferUsr, bytesRead);
@@ -430,7 +433,7 @@ SyscallHandler(ExceptionType _et)
         }
 
         OpenFile *archivo = fileSystem->Open(filename);
-
+        DEBUG('e', "\\ 0? %d \n", filename[0] == '\0');
         DEBUG('e', "Filename is %s \n", filename);
 
         if (archivo == nullptr)
@@ -446,7 +449,9 @@ SyscallHandler(ExceptionType _et)
             hilo->space = memoria;
             hilo->Fork(initialize, args);
             DEBUG('e', "Initialized new exec thread \n");
+#ifndef DEMAND_LOADING
             delete archivo;
+#endif
             machine->WriteRegister(2, hilo->pid);
         }
         break;
@@ -468,6 +473,18 @@ PageFaultHandler(ExceptionType _et)
 {
     int addr = machine->ReadRegister(BAD_VADDR_REG);
     int vpn = addr / PAGE_SIZE;
+    // if (vpn != 11)
+    //     printf("Voy a leer en vpn: %d\n", vpn);
+#ifdef DEMAND_LOADING
+    // if (vpn > currentThread->space->numPages)
+    //     printf("Te pasaste papi");
+    // else
+    if (currentThread->space->pageTable[vpn].physicalPage == -1)
+    {
+        currentThread->space->LoadPage(vpn);
+        //printf("El error no estaba aca \n");
+    }
+#endif
     machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = currentThread->space->pageTable[vpn];
     tlbSelection++;
     stats->tlbMiss++;

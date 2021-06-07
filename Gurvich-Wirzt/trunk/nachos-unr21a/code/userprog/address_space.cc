@@ -8,6 +8,7 @@
 #include "address_space.hh"
 #include "executable.hh"
 #include "threads/system.hh"
+#include <stdio.h>
 
 #include <string.h>
 
@@ -65,6 +66,7 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
     // If the code segment was entirely on a separate page, we could
     // set its pages to be read-only.
   }
+#ifndef DEMAND_LOADING
 
   char *mainMemory = machine->GetMMU()->mainMemory;
 
@@ -111,6 +113,7 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
       i++;
     }
   }
+#endif
 }
 /// Deallocate an address space.
 ///
@@ -176,28 +179,56 @@ void AddressSpace::RestoreState()
 }
 
 #ifdef DEMAND_LOADING
-TranslationEntry *AddressSpace::LoadPage(int vpn)
+void AddressSpace::LoadPage(int vpn)
 {
+  char *mainMemory = machine->GetMMU()->mainMemory;
   int phy = pages->Find();
+  if (phy == -1)
+    printf("Oh no");
   pageTable[vpn].physicalPage = phy;
   pageTable[vpn].valid = true;
   pageTable[vpn].use = false;
   pageTable[vpn].dirty = false;
   pageTable[vpn].readOnly = false;
+
   memset(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], 0, PAGE_SIZE);
-  if ((vpn * PAGE_SIZE) <= size - USER_STACK_SIZE)
+  unsigned int vaddrinit = vpn * PAGE_SIZE;
+  if (vaddrinit <= size - USER_STACK_SIZE) // size es getSize + USER_STACK_SIZE
   {
-    uint32_t codeSize = exe->GetCodeSize();
-    uint32_t virtualAddr = exe->GetCodeAddr();
-    if (vpn * PAGE_SIZE > (codeSize + virtualAddr) / PAGE_SIZE) // esta en data
+    uint32_t dataSizeI = exe->GetInitDataSize();
+    //uint32_t dataSizeU = exe->GetUninitDataSize();
+    uint32_t dataAddr = exe->GetInitDataAddr();
+    uint32_t codeAddr = exe->GetCodeAddr();
+    if (vaddrinit < dataAddr && vaddrinit >= codeAddr) // Estamos en codeBlock
     {
-      exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, 0);
+      // Preguntar, tal vez es trabajo de más
+      if (vaddrinit + PAGE_SIZE >= dataAddr) // Arranca en code termina en Data
+      {
+        printf("Arranca en code, termina en data %d\n", vpn);
+        unsigned leercode = dataAddr - vaddrinit;
+        unsigned leerdata = PAGE_SIZE - leercode;
+        exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leercode, vaddrinit - codeAddr);
+        exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE] + leercode, leerdata, 0);
+      }
+      else // Esta todo en Code
+      {
+        printf("Esta todo en code \n");
+        exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit - codeAddr);
+      }
     }
-    else // esta en code
+    else if (vaddrinit < dataAddr + dataSizeI && vaddrinit >= dataAddr) // Estamos en data Init
     {
-      exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, 0);
+      printf("Estamos en data init \n");
+      if (vaddrinit + PAGE_SIZE >= dataAddr + dataSizeI)
+      { // Arranca en init, termina afuera
+        unsigned leerInit = dataAddr + dataSizeI - vaddrinit;
+        exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leerInit, vaddrinit - dataAddr);
+      }
+      else
+      {
+        exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit - dataAddr);
+      }
     }
   }
-  // }
 }
 #endif

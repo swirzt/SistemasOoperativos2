@@ -81,6 +81,7 @@ Thread::~Thread()
 // }
 #ifdef USER_PROGRAM
     delete openFiles;
+    delete space;
     activeThreads->Remove(pid);
 #endif
 }

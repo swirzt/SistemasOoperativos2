@@ -32,12 +32,12 @@ void StartProcess(const char *filename)
     AddressSpace *space = new AddressSpace(executable);
     currentThread->space = space;
 
+#ifndef DEMAND_LOADING
     delete executable;
-
+#endif
     space->InitRegisters(); // Set the initial register values.
     space->RestoreState();  // Load page table register.
 
-    printf("pase algo");
     machine->Run(); // Jump to the user progam.
     ASSERT(false);  // `machine->Run` never returns; the address space
                     // exits by doing the system call `Exit`.

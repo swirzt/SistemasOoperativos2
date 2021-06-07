@@ -17,7 +17,7 @@
 #include "machine/translation_entry.hh"
 #include "executable.hh"
 
-const unsigned USER_STACK_SIZE = 1024; ///< Increase this as necessary!
+const unsigned USER_STACK_SIZE = 2048; ///< Increase this as necessary!
 
 class AddressSpace
 {
@@ -50,13 +50,14 @@ public:
 
 #ifdef DEMAND_LOADING
     // Loads a page to memory
-    TranslationEntry *LoadPage(int vpn);
+    void LoadPage(int vpn);
 #endif
+    unsigned numPages;
+
 private:
     unsigned int Translate(unsigned int virtualAddr);
 
     /// Number of pages in the virtual address space.
-    unsigned numPages;
 
     // Total size of file
     unsigned int size;
