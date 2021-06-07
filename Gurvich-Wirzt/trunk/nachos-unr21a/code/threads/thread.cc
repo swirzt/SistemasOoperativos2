@@ -75,13 +75,15 @@ Thread::~Thread()
         SystemDep::DeallocBoundedArray((char *)stack,
                                        STACK_SIZE * sizeof *stack);
     }
-// if (joinable)
-// {
-//     delete canal;
-// }
+    if (joinable)
+    {
+        delete canal;
+    }
 #ifdef USER_PROGRAM
     delete openFiles;
     activeThreads->Remove(pid);
+    // Si queremos que no haga ASumming y Halt
+    // Preguntar cuantos threads quedan y hacer Halt
 #endif
 }
 
@@ -122,7 +124,7 @@ int Thread::Join()
     DEBUG('t', "Joining thread: %s\n", this->GetName());
     int buffer;
     canal->Receive(&buffer);
-    delete canal;
+    // delete canal;
     DEBUG('t', "Ended Joining thread: %s\n", this->GetName());
     return buffer;
 }

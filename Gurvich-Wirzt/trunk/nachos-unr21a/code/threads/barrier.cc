@@ -7,7 +7,7 @@ Barrier::Barrier(const char *debugname, unsigned int bsize)
     lockBarrera = new Lock("Barrier Lock");
     pared = new Condition("Barrier conditional", lockBarrera);
     name = debugname;
-    this->size = size;
+    size = bsize;
     esperando = 0;
 }
 
@@ -20,6 +20,7 @@ Barrier::~Barrier()
 void Barrier::Wait()
 {
     lockBarrera->Acquire();
+    DEBUG('t', "Esperando: %d\n", esperando);
     if (size - 1 == esperando)
     {
         pared->Broadcast();
@@ -30,6 +31,7 @@ void Barrier::Wait()
         esperando++;
         pared->Wait();
     }
+    DEBUG('t', "Esperan2: %d\n", esperando);
     lockBarrera->Release();
 }
 

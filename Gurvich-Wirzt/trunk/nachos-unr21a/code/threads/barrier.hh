@@ -14,8 +14,8 @@ public:
     const char *getName();
 
 private:
-    unsigned int size;
     unsigned int esperando;
+    unsigned int size;
     Lock *lockBarrera;
     Condition *pared;
     const char *name;

@@ -42,12 +42,13 @@ Condition::GetName() const
 void Condition::Wait()
 {
     ASSERT(lock->IsHeldByCurrentThread());
-    lock->Release();
     Semaphore *newSem = new Semaphore(currentThread->GetName(), 0);
     waitQueue->Append(newSem);
     DEBUG('t', "%s going to wait CONDITION\n", currentThread->GetName());
     // Entra a esperar
+    lock->Release();
     newSem->P();
+    delete newSem;
     DEBUG('t', "%s im awake CONDITION\n", currentThread->GetName());
     // LLegó un signal
     lock->Acquire();
@@ -58,9 +59,9 @@ void Condition::Signal()
     ASSERT(lock->IsHeldByCurrentThread());
     if (!waitQueue->IsEmpty())
     {
+        DEBUG('t', "Signaling! \n");
         Semaphore *toSignal = waitQueue->Pop();
         toSignal->V();
-        delete toSignal;
     }
 }
 
@@ -69,8 +70,8 @@ void Condition::Broadcast()
     ASSERT(lock->IsHeldByCurrentThread());
     while (!waitQueue->IsEmpty())
     {
+        DEBUG('t', "Broadcasting! \n");
         Semaphore *toSignal = waitQueue->Pop();
         toSignal->V();
-        delete toSignal;
     }
 }
