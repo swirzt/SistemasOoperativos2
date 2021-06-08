@@ -64,8 +64,6 @@ DefaultHandler(ExceptionType et)
 // Initializes a forked thread
 void initialize(void *args)
 {
-    for (int i = 0; i < 3; i++)
-        printf("Argumento %d, %s\n", i, ((char **)args)[i]);
     currentThread->space->InitRegisters(); //Initialize registers
     currentThread->space->RestoreState();  //Copy the father's state
 

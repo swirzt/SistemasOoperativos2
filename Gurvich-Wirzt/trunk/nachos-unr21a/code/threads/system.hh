@@ -15,6 +15,9 @@
 #include "machine/statistics.hh"
 #include "machine/timer.hh"
 
+// Cantidad de veces que se intenta leer memoria
+#define READPASS 5
+
 /// Initialization and cleanup routines.
 
 // Initialization, called before anything else.
