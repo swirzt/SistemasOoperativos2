@@ -383,10 +383,6 @@ SyscallHandler(ExceptionType _et)
 
         break;
     }
-
-        // No funciona el Join porque no tenemos las correcciones de la plancha 2
-        // Nuestro Thread::Join no funciona correctamente
-        // Nuestro grupo fue uno de los que no llegaron a corregir antes que se entregue esta plancha
     case SC_JOIN:
     {
         SpaceId id = machine->ReadRegister(4);
@@ -473,19 +469,12 @@ PageFaultHandler(ExceptionType _et)
 {
     int addr = machine->ReadRegister(BAD_VADDR_REG);
     int vpn = addr / PAGE_SIZE;
-    // if (vpn != 11)
-    //     printf("Voy a leer en vpn: %d\n", vpn);
+    TranslationEntry entry = currentThread->space->pageTable[vpn];
 #ifdef DEMAND_LOADING
-    // if (vpn > currentThread->space->numPages)
-    //     printf("Te pasaste papi");
-    // else
-    if (currentThread->space->pageTable[vpn].physicalPage == -1)
-    {
+    if (entry.physicalPage == -1) //La pagina no se cargo todavia
         currentThread->space->LoadPage(vpn);
-        //printf("El error no estaba aca \n");
-    }
 #endif
-    machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = currentThread->space->pageTable[vpn];
+    machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = entry;
     tlbSelection++;
     stats->tlbMiss++;
 }
@@ -494,6 +483,7 @@ PageFaultHandler(ExceptionType _et)
 static void ReadOnlyHandler(ExceptionType _et)
 {
     DEBUG('e', "Tried to read from a read only page");
+    // PREGUNTA PARA DAMIAN
     ASSERT(false); // Esto mata al SO, deberia solo matar al programa que intento?
     return;
 }

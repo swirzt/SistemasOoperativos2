@@ -121,7 +121,11 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
 AddressSpace::~AddressSpace()
 {
   for (unsigned i = 0; i < numPages; i++)
-    pages->Clear(pageTable[i].physicalPage);
+  {
+    int phy = pageTable[i].physicalPage;
+    if (phy != -1)
+      pages->Clear(phy);
+  }
   delete[] pageTable;
 }
 
@@ -184,47 +188,47 @@ void AddressSpace::LoadPage(int vpn)
   char *mainMemory = machine->GetMMU()->mainMemory;
   int phy = pages->Find();
   if (phy == -1)
-    printf("Oh no");
+    ASSERT(false);
   pageTable[vpn].physicalPage = phy;
   pageTable[vpn].valid = true;
   pageTable[vpn].use = false;
   pageTable[vpn].dirty = false;
   pageTable[vpn].readOnly = false;
 
-  memset(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], 0, PAGE_SIZE);
+  memset(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], 0, PAGE_SIZE); //Solo cuando es la pila
   unsigned int vaddrinit = vpn * PAGE_SIZE;
   if (vaddrinit <= size - USER_STACK_SIZE) // size es getSize + USER_STACK_SIZE
   {
     uint32_t dataSizeI = exe->GetInitDataSize();
-    //uint32_t dataSizeU = exe->GetUninitDataSize();
+    uint32_t dataSizeU = exe->GetUninitDataSize();
     uint32_t dataAddr = exe->GetInitDataAddr();
-    uint32_t codeAddr = exe->GetCodeAddr();
-    if (vaddrinit < dataAddr && vaddrinit >= codeAddr) // Estamos en codeBlock
+
+    if (dataSizeI + dataSizeU == 0) // No hay sección Data
     {
-      // Preguntar, tal vez es trabajo de más
+      exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit);
+    }
+    else if (vaddrinit < dataAddr && dataSizeI + dataSizeU > 0) // Hay data y estamos en codeBlock
+    {
       if (vaddrinit + PAGE_SIZE >= dataAddr) // Arranca en code termina en Data
       {
-        printf("Arranca en code, termina en data %d\n", vpn);
         unsigned leercode = dataAddr - vaddrinit;
         unsigned leerdata = PAGE_SIZE - leercode;
-        exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leercode, vaddrinit - codeAddr);
+        exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leercode, vaddrinit);
         exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE] + leercode, leerdata, 0);
       }
       else // Esta todo en Code
       {
-        printf("Esta todo en code \n");
-        exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit - codeAddr);
+        exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit);
       }
     }
-    else if (vaddrinit < dataAddr + dataSizeI && vaddrinit >= dataAddr) // Estamos en data Init
+    else if (vaddrinit < dataAddr + dataSizeI && vaddrinit >= dataAddr && dataSizeI + dataSizeU > 0) // Estamos en data Init
     {
-      printf("Estamos en data init \n");
       if (vaddrinit + PAGE_SIZE >= dataAddr + dataSizeI)
       { // Arranca en init, termina afuera
         unsigned leerInit = dataAddr + dataSizeI - vaddrinit;
         exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leerInit, vaddrinit - dataAddr);
       }
-      else
+      else // Esta todo en data Init
       {
         exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit - dataAddr);
       }
