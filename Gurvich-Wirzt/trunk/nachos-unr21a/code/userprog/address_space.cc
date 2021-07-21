@@ -12,6 +12,10 @@
 
 #include <string.h>
 
+#ifdef SWAP
+#include <stdlib.h>
+#endif
+
 unsigned int AddressSpace::Translate(unsigned int virtualAddr)
 {
   uint32_t page = virtualAddr / PAGE_SIZE;
@@ -165,6 +169,14 @@ void AddressSpace::SaveState()
 {
 }
 
+//Random swap policy
+#ifdef SWAP
+int PickVictim()
+{
+  return rand() % NUM_PHYS_PAGES;
+}
+#endif
+
 /// On a context switch, restore the machine state so that this address space
 /// can run.
 ///
@@ -186,14 +198,24 @@ void AddressSpace::RestoreState()
 void AddressSpace::LoadPage(int vpn)
 {
   char *mainMemory = machine->GetMMU()->mainMemory;
+
+#ifndef SWAP
   int phy = pages->Find();
   if (phy == -1)
     ASSERT(false);
+#else
+  int phy = pages->Find(vpn, currentThread->pid);
+  if (phy == -1)
+  {
+    unisgned *tokill = PickVictim();
+    tokillPID = tokill[1];
+    tokillVPN = tokill[0];
+    //TODO: Continuar con la funcion de WriteToSwap en Thread.cc
+  }
+#endif
+
   pageTable[vpn].physicalPage = phy;
   pageTable[vpn].valid = true;
-  pageTable[vpn].use = false;
-  pageTable[vpn].dirty = false;
-  pageTable[vpn].readOnly = false;
 
   memset(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], 0, PAGE_SIZE); //Solo cuando es la pila
   unsigned int vaddrinit = vpn * PAGE_SIZE;

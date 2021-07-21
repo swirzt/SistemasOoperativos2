@@ -19,10 +19,10 @@ Coremap::Coremap(unsigned nitems)
     ASSERT(nitems > 0);
 
     numEntries = nitems;
-    map = new int *[numEntries];
+    map = new unsigned *[numEntries];
     for (unsigned i = 0; i < numEntries; i++)
     {
-        map[i] = new int[2];
+        map[i] = new unsigned[2];
         map[i][0] = -1;
         map[i][1] = -1;
     }
@@ -81,4 +81,26 @@ int Coremap::Find(unsigned vpn, unsigned pid)
         }
     }
     return -1;
+}
+
+/// Return the number of clear entries in the bitmap.  (In other words, how many
+/// entries are unallocated?)
+unsigned Coremap::CountClear()
+{
+    unsigned count = 0;
+
+    for (unsigned i = 0; i < numEntries; i++)
+    {
+        if (!Test(i))
+        {
+            count++;
+        }
+    }
+    return count;
+}
+
+/// Return the info of an entry
+unsigned *Coremap::GetOwner(unsigned phys)
+{
+    return map[phys];
 }

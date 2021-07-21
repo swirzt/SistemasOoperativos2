@@ -51,12 +51,16 @@ public:
     /// If no pairs are clear, return (-1,-1).
     int Find(unsigned vpn, unsigned pid);
 
+    unsigned CountClear();
+
+    unsigned *GetOwner(unsigned phys);
+
 private:
     /// Number of entries in the bitmap.
     unsigned numEntries;
 
     /// Pair storage.
-    int **map;
+    unsigned **map;
 };
 
 #endif

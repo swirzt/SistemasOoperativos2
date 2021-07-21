@@ -12,7 +12,13 @@
 #include "userprog/debugger.hh"
 #include "userprog/exception.hh"
 #include "userprog/synch_console.hh"
+
+#ifndef SWAP
 #include "lib/bitmap.hh"
+#else
+#include "vmem/coremap.hh"
+#endif
+
 #include "lib/table.hh"
 #endif
 
@@ -46,7 +52,13 @@ SynchDisk *synchDisk;
 #ifdef USER_PROGRAM // Requires either *FILESYS* or *FILESYS_STUB*.
 Machine *machine;   ///< User program memory and registers.
 SynchConsole *synchconsole;
+
+#ifndef SWAP
 Bitmap *pages;
+#else
+Coremap *pages;
+#endif
+
 Table<Thread *> *activeThreads;
 #endif
 
@@ -262,7 +274,12 @@ void Initialize(int argc, char **argv)
     machine = new Machine(d); // This must come first.
     SetExceptionHandlers();
     synchconsole = new SynchConsole();
+
+#ifndef SWAP
     pages = new Bitmap(NUM_PHYS_PAGES);
+#else
+    pages = new Coremap(NUM_PHYS_PAGES);
+#endif
 #endif
 
 #ifdef FILESYS

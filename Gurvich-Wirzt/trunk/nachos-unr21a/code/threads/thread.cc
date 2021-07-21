@@ -23,6 +23,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <iostream>
 
 /// This is put at the top of the execution stack, for detecting stack
 /// overflows.
@@ -32,6 +33,31 @@ static inline bool
 IsThreadStatus(ThreadStatus s)
 {
     return 0 <= s && s < NUM_THREAD_STATUS;
+}
+
+unsigned charlen(char *word)
+{
+    unsigned i = 0;
+    while (*(word + i++))
+        ;
+    return i;
+}
+
+void swapName(int pid, char *name)
+{
+    name[0] = 'S';
+    name[1] = 'W';
+    name[2] = 'A';
+    name[3] = 'P';
+    name[4] = '.';
+    char pidc[20];
+    std::sprintf(pidc, "%d", pid);
+    int i, len = charlen(pidc);
+    for (i = 0; i < len; i++)
+    {
+        name[i + 5] = pidc[i];
+    }
+    name[i + 5] = '\0';
 }
 
 /// Initialize a thread control block, so that we can then call
@@ -54,6 +80,12 @@ Thread::Thread(const char *threadName, bool join, int priority)
     openFiles->Add(nullptr);
     openFiles->Add(nullptr);
     pid = activeThreads->Add(this);
+#ifdef SWAP
+    swapName(pid, nombreswap);
+    fileSystem->Create(nombreswap, 0);
+    swap = fileSystem->Open(nombreswap);
+#endif
+
 #endif
 }
 
@@ -75,16 +107,20 @@ Thread::~Thread()
         SystemDep::DeallocBoundedArray((char *)stack,
                                        STACK_SIZE * sizeof *stack);
     }
-    if (joinable)
-    {
-        delete canal;
-    }
+    // if (joinable) Traía problemas, encotnrar otra forma de no perder espacio
+    // {
+    //     delete canal;
+    // }
 #ifdef USER_PROGRAM
     delete openFiles;
     delete space;
     activeThreads->Remove(pid);
-    // Si queremos que no haga ASumming y Halt
-    // Preguntar cuantos threads quedan y hacer Halt
+// Si queremos que no haga ASumming y Halt
+// Preguntar cuantos threads quedan y hacer Halt
+#ifdef SWAP
+    //Pregunta para Damian: ¿Como borrar los archivos de swap?
+    fileSystem->Remove(nombreswap);
+#endif
 #endif
 }
 
