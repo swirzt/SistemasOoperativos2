@@ -421,7 +421,8 @@ mmu.o: ../machine/mmu.cc ../machine/mmu.hh ../machine/exception_type.hh \
  ../filesys/synch_disk.hh
 coremap.o: ../vmem/coremap.cc ../vmem/coremap.hh ../lib/utility.hh \
  ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
- ../machine/system_dep.hh ../filesys/open_file.hh
+ ../machine/system_dep.hh
+swappedlist.o: ../vmem/swappedlist.cc ../vmem/swappedlist.hh
 directory.o: ../filesys/directory.cc ../filesys/directory.hh \
  ../filesys/raw_directory.hh ../filesys/open_file.hh ../lib/utility.hh \
  ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
@@ -678,8 +679,8 @@ translation_entry.o: ../machine/translation_entry.hh ../lib/utility.hh \
  ../lib/assert.hh ../lib/debug.hh ../lib/debug_opts.hh \
  ../machine/system_dep.hh
 coremap.o: ../vmem/coremap.hh ../lib/utility.hh ../lib/assert.hh \
- ../lib/debug.hh ../lib/debug_opts.hh ../machine/system_dep.hh \
- ../filesys/open_file.hh
+ ../lib/debug.hh ../lib/debug_opts.hh ../machine/system_dep.hh
+swappedlist.o: ../vmem/swappedlist.hh
 directory.o: ../filesys/directory.hh ../filesys/raw_directory.hh \
  ../filesys/open_file.hh ../lib/utility.hh ../lib/assert.hh \
  ../lib/debug.hh ../lib/debug_opts.hh ../machine/system_dep.hh

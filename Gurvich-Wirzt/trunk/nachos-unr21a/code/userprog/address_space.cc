@@ -14,6 +14,7 @@
 
 #ifdef SWAP
 #include <stdlib.h>
+#include "vmem/swappedlist.hh"
 #endif
 
 unsigned int AddressSpace::Translate(unsigned int virtualAddr)
@@ -27,7 +28,7 @@ unsigned int AddressSpace::Translate(unsigned int virtualAddr)
 /// First, set up the translation from program memory to physical memory.
 /// For now, this is really simple (1:1), since we are only uniprogramming,
 /// and we have a single unsegmented page table.
-AddressSpace::AddressSpace(OpenFile *executable_file)
+AddressSpace::AddressSpace(OpenFile *executable_file, OpenFile *swap_file)
 {
   ASSERT(executable_file != nullptr);
 
@@ -35,13 +36,18 @@ AddressSpace::AddressSpace(OpenFile *executable_file)
   ASSERT(exe->CheckMagic());
 
   // How big is address space?
-
   size = exe->GetSize() + USER_STACK_SIZE;
+
   // We need to increase the size to leave room for the stack.
   numPages = DivRoundUp(size, PAGE_SIZE);
   size = numPages * PAGE_SIZE;
 
-  ASSERT(numPages <= pages->CountClear());
+#ifdef SWAP
+  swapped = new SwappedList(numPages);
+  swap = swap_file;
+#else
+  ASSERT(numPages <= pages->CountClear()); // Porque me gusta
+#endif
   // Check we are not trying to run anything too big -- at least until we
   // have virtual memory.
 
@@ -167,6 +173,19 @@ void AddressSpace::InitRegisters()
 /// For now, nothing!
 void AddressSpace::SaveState()
 {
+#ifdef SWAP
+  TranslationEntry *tlb = machine->GetMMU()->tlb;
+
+  for (unsigned i = 0; i < TLB_SIZE; i++)
+  {
+    if (tlb[i].valid)
+    {
+      unsigned vpn = tlb[i].virtualPage;
+      pageTable[vpn].dirty = tlb[i].dirty;
+      pageTable[vpn].use = tlb[i].use;
+    }
+  }
+#endif
 }
 
 //Random swap policy
@@ -207,54 +226,85 @@ void AddressSpace::LoadPage(int vpn)
   int phy = pages->Find(vpn, currentThread->pid);
   if (phy == -1)
   {
-    unisgned *tokill = PickVictim();
-    tokillPID = tokill[1];
-    tokillVPN = tokill[0];
-    //TODO: Continuar con la funcion de WriteToSwap en Thread.cc
+    phy = PickVictim();
+    unsigned *tokill = pages->GetOwner(phy);
+    unsigned tokillPID = tokill[1];                               // Este es el PID del Proceso
+    unsigned tokillVPN = tokill[0];                               // Esta es la VPN para de la pagina fisica para ese proceso
+    activeThreads->Get(tokillPID)->space->WriteToSwap(tokillVPN); // Le decimos al proceso que guarde su página
   }
 #endif
 
   pageTable[vpn].physicalPage = phy;
   pageTable[vpn].valid = true;
-
   memset(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], 0, PAGE_SIZE); //Solo cuando es la pila
   unsigned int vaddrinit = vpn * PAGE_SIZE;
-  if (vaddrinit <= size - USER_STACK_SIZE) // size es getSize + USER_STACK_SIZE
-  {
-    uint32_t dataSizeI = exe->GetInitDataSize();
-    uint32_t dataSizeU = exe->GetUninitDataSize();
-    uint32_t dataAddr = exe->GetInitDataAddr();
 
-    if (dataSizeI + dataSizeU == 0) // No hay sección Data
+#ifdef SWAP
+  int whereswap = swapped->Find(vpn);
+  if (whereswap == -1)
+  {
+#endif
+    if (vaddrinit <= size - USER_STACK_SIZE) // size es getSize + USER_STACK_SIZE
     {
-      exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit);
-    }
-    else if (vaddrinit < dataAddr && dataSizeI + dataSizeU > 0) // Hay data y estamos en codeBlock
-    {
-      if (vaddrinit + PAGE_SIZE >= dataAddr) // Arranca en code termina en Data
-      {
-        unsigned leercode = dataAddr - vaddrinit;
-        unsigned leerdata = PAGE_SIZE - leercode;
-        exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leercode, vaddrinit);
-        exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE] + leercode, leerdata, 0);
-      }
-      else // Esta todo en Code
+      uint32_t dataSizeI = exe->GetInitDataSize();
+      uint32_t dataSizeU = exe->GetUninitDataSize();
+      uint32_t dataAddr = exe->GetInitDataAddr();
+
+      if (dataSizeI + dataSizeU == 0) // No hay sección Data
       {
         exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit);
       }
-    }
-    else if (vaddrinit < dataAddr + dataSizeI && vaddrinit >= dataAddr && dataSizeI + dataSizeU > 0) // Estamos en data Init
-    {
-      if (vaddrinit + PAGE_SIZE >= dataAddr + dataSizeI)
-      { // Arranca en init, termina afuera
-        unsigned leerInit = dataAddr + dataSizeI - vaddrinit;
-        exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leerInit, vaddrinit - dataAddr);
-      }
-      else // Esta todo en data Init
+      else if (vaddrinit < dataAddr && dataSizeI + dataSizeU > 0) // Hay data y estamos en codeBlock
       {
-        exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit - dataAddr);
+        if (vaddrinit + PAGE_SIZE >= dataAddr) // Arranca en code termina en Data
+        {
+          unsigned leercode = dataAddr - vaddrinit;
+          unsigned leerdata = PAGE_SIZE - leercode;
+          exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leercode, vaddrinit);
+          exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE] + leercode, leerdata, 0);
+        }
+        else // Esta todo en Code
+        {
+          exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit);
+        }
+      }
+      else if (vaddrinit < dataAddr + dataSizeI && vaddrinit >= dataAddr && dataSizeI + dataSizeU > 0) // Estamos en data Init
+      {
+        if (vaddrinit + PAGE_SIZE >= dataAddr + dataSizeI)
+        { // Arranca en init, termina afuera
+          unsigned leerInit = dataAddr + dataSizeI - vaddrinit;
+          exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leerInit, vaddrinit - dataAddr);
+        }
+        else // Esta todo en data Init
+        {
+          exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit - dataAddr);
+        }
       }
     }
+#ifdef SWAP
   }
+  else
+  {
+    swap->ReadAt(&mainMemory[phy * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE);
+  }
+#endif
 }
+
+#ifdef SWAP
+void AddressSpace::WriteToSwap(unsigned vpn)
+{
+  if (pageTable[vpn].dirty) //Si no esta dirty la puedo dejar sin problemas
+  {
+    int whereswap = swapped->Find(vpn);
+    if (whereswap == -1)
+      swapped->Add(vpn);
+
+    char *mainMemory = machine->GetMMU()->mainMemory;
+    swap->WriteAt(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE);
+    pageTable[vpn].dirty = false;
+  }
+  pageTable[vpn].valid = false;
+}
+#endif
+
 #endif

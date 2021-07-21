@@ -17,7 +17,6 @@
 #define NACHOS_COREMAP__HH
 
 #include "lib/utility.hh"
-#include "filesys/open_file.hh"
 
 /// A “bitmap” -- an array of bits, each of which can be independently set,
 /// cleared, and tested.

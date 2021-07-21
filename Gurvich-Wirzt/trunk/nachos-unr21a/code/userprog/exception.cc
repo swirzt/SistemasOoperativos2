@@ -441,7 +441,11 @@ SyscallHandler(ExceptionType _et)
         {
             DEBUG('e', "Creating a new thread\n");
             Thread *hilo = new Thread(filename, joinable, 0);
-            AddressSpace *memoria = new AddressSpace(archivo);
+#ifdef SWAP
+            AddressSpace *memoria = new AddressSpace(archivo, hilo->swap);
+#else
+            AddressSpace *memoria = new AddressSpace(archivo, nullptr);
+#endif
             hilo->space = memoria;
             hilo->Fork(initialize, args);
             DEBUG('e', "Initialized new exec thread \n");

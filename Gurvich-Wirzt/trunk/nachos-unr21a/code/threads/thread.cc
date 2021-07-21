@@ -53,11 +53,11 @@ void swapName(int pid, char *name)
     char pidc[20];
     std::sprintf(pidc, "%d", pid);
     int i, len = charlen(pidc);
-    for (i = 0; i < len; i++)
+    for (i = 0; i < len + 1; i++)
     {
         name[i + 5] = pidc[i];
     }
-    name[i + 5] = '\0';
+    // name[i + 5] = '\0';
 }
 
 /// Initialize a thread control block, so that we can then call

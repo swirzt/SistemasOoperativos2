@@ -203,8 +203,6 @@ public:
     OpenFile *swap;
     char nombreswap[20];
 
-    // Write page to swap
-    bool WriteToSwap(unsigned vpn, unsigned pid);
 #endif
 #endif
 };

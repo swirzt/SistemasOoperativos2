@@ -120,8 +120,10 @@ USERPROG_SRC = userprog/address_space.cc            \
                machine/mips_sim.cc                  \
                machine/mmu.cc
 
-VMEM_HDR =  vmem/coremap.hh
-VMEM_SRC =  vmem/coremap.cc
+VMEM_HDR =  vmem/coremap.hh \
+            vmem/swappedlist.hh
+VMEM_SRC =  vmem/coremap.cc \
+            vmem/swappedlist.cc
 
 FILESYS_HDR = filesys/directory.hh       \
               filesys/directory_entry.hh \
