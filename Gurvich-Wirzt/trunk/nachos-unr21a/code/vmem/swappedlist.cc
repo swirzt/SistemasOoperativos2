@@ -1,4 +1,5 @@
 #include "swappedlist.hh"
+#include <stdio.h>
 
 SwappedList::SwappedList(unsigned nitems)
 {
@@ -14,8 +15,10 @@ SwappedList::~SwappedList()
 
 int SwappedList::Add(unsigned item)
 {
-    swapped[saved++] = item;
-    return saved - 1;
+    int oldSaved = saved;
+    swapped[saved] = item;
+    saved++;
+    return oldSaved;
 }
 
 int SwappedList::Find(unsigned item)
@@ -26,4 +29,14 @@ int SwappedList::Find(unsigned item)
             return i;
     }
     return -1;
+}
+
+void SwappedList::printSwapped()
+{
+    printf("Páginas guardadas:\n");
+    for (unsigned i = 0; i < saved; i++)
+    {
+        printf("%d, ", swapped[i]);
+    }
+    printf("\n");
 }

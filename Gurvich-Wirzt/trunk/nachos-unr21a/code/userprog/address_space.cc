@@ -137,6 +137,9 @@ AddressSpace::~AddressSpace()
       pages->Clear(phy);
   }
   delete[] pageTable;
+#ifdef SWAP
+  delete swap;
+#endif
 }
 
 /// Set the initial values for the user-level register set.
@@ -183,6 +186,7 @@ void AddressSpace::SaveState()
       unsigned vpn = tlb[i].virtualPage;
       pageTable[vpn].dirty = tlb[i].dirty;
       pageTable[vpn].use = tlb[i].use;
+      pageTable[vpn].valid = tlb[i].valid;
     }
   }
 #endif
@@ -228,10 +232,12 @@ void AddressSpace::LoadPage(int vpn)
   {
     phy = PickVictim();
     unsigned *tokill = pages->GetOwner(phy);
-    unsigned tokillPID = tokill[1];                               // Este es el PID del Proceso
-    unsigned tokillVPN = tokill[0];                               // Esta es la VPN para de la pagina fisica para ese proceso
-    activeThreads->Get(tokillPID)->space->WriteToSwap(tokillVPN); // Le decimos al proceso que guarde su página
+    unsigned tokillPID = tokill[1];                                    // Este es el PID del Proceso
+    unsigned tokillVPN = tokill[0];                                    // Esta es la VPN para de la pagina fisica para ese proceso
+    activeThreads->Get(tokillPID)->space->WriteToSwap(tokillVPN, phy); // Le decimos al proceso que guarde su página
+    printf("%d\n", activeThreads->Get(tokillPID)->space->pageTable[tokillVPN].dirty);
   }
+
 #endif
 
   pageTable[vpn].physicalPage = phy;
@@ -241,6 +247,7 @@ void AddressSpace::LoadPage(int vpn)
 
 #ifdef SWAP
   int whereswap = swapped->Find(vpn);
+
   if (whereswap == -1)
   {
 #endif
@@ -291,16 +298,29 @@ void AddressSpace::LoadPage(int vpn)
 }
 
 #ifdef SWAP
-void AddressSpace::WriteToSwap(unsigned vpn)
+void AddressSpace::WriteToSwap(unsigned vpn, unsigned phy)
 {
-  if (pageTable[vpn].dirty) //Si no esta dirty la puedo dejar sin problemas
+  // if (currentThread->space == this)
+  TranslationEntry *tlb = machine->GetMMU()->tlb;
+  bool dirtyTlb = false;
+
+  for (int i = 0; i < TLB_SIZE; i++)
   {
+    if (tlb[i].physicalPage == phy)
+    {
+      dirtyTlb = tlb[i].dirty;
+    }
+  }
+  if (dirtyTlb || pageTable[vpn].dirty) //Si no esta dirty la puedo dejar sin problemas
+  {
+    printf("Aca entre\n");
     int whereswap = swapped->Find(vpn);
     if (whereswap == -1)
-      swapped->Add(vpn);
+      whereswap = swapped->Add(vpn);
 
     char *mainMemory = machine->GetMMU()->mainMemory;
-    swap->WriteAt(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE);
+
+    ASSERT(swap->WriteAt(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE));
     pageTable[vpn].dirty = false;
   }
   pageTable[vpn].valid = false;

@@ -475,7 +475,7 @@ PageFaultHandler(ExceptionType _et)
     int vpn = addr / PAGE_SIZE;
     TranslationEntry entry = currentThread->space->pageTable[vpn];
 #ifdef DEMAND_LOADING
-    if (entry.physicalPage == -1) //La pagina no se cargo todavia
+    if (!entry.valid)
         currentThread->space->LoadPage(vpn);
 #endif
     machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = entry;

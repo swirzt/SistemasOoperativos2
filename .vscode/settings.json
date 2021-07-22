@@ -9,7 +9,8 @@
         "utility": "cpp",
         "optional": "cpp",
         "tuple": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "typeinfo": "cpp"
     },
     "C_Cpp.dimInactiveRegions": false
 }

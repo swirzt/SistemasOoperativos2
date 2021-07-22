@@ -59,7 +59,7 @@ public:
 #ifdef SWAP
     SwappedList *swapped;
     OpenFile *swap;
-    void WriteToSwap(unsigned vpn);
+    void WriteToSwap(unsigned vpn, unsigned phy);
 #endif
 
 #endif

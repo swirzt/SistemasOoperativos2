@@ -11,6 +11,8 @@ public:
 
     int Find(unsigned item);
 
+    void printSwapped();
+
 private:
     unsigned size;
     unsigned saved;
