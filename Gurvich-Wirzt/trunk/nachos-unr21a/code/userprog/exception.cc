@@ -442,9 +442,9 @@ SyscallHandler(ExceptionType _et)
             DEBUG('e', "Creating a new thread\n");
             Thread *hilo = new Thread(filename, joinable, 0);
 #ifdef SWAP
-            AddressSpace *memoria = new AddressSpace(archivo, hilo->swap);
+            AddressSpace *memoria = new AddressSpace(archivo, hilo->pid);
 #else
-            AddressSpace *memoria = new AddressSpace(archivo, nullptr);
+            AddressSpace *memoria = new AddressSpace(archivo, 0);
 #endif
             hilo->space = memoria;
             hilo->Fork(initialize, args);
@@ -473,12 +473,16 @@ PageFaultHandler(ExceptionType _et)
 {
     int addr = machine->ReadRegister(BAD_VADDR_REG);
     int vpn = addr / PAGE_SIZE;
-    TranslationEntry entry = currentThread->space->pageTable[vpn];
+    TranslationEntry *entry = &(currentThread->space->pageTable[vpn]);
 #ifdef DEMAND_LOADING
-    if (!entry.valid)
+    if (!entry->valid)
         currentThread->space->LoadPage(vpn);
 #endif
-    machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = entry;
+    TranslationEntry entrytlb = machine->GetMMU()->tlb[tlbSelection % TLB_SIZE];
+    unsigned mmuvpn = entrytlb.virtualPage;
+    if (entrytlb.valid)
+        currentThread->space->pageTable[mmuvpn] = entrytlb;
+    machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = *entry;
     tlbSelection++;
     stats->tlbMiss++;
 }

@@ -198,12 +198,6 @@ public:
     // PID of this thread
     int pid;
 
-#ifdef SWAP
-
-    OpenFile *swap;
-    char nombreswap[20];
-
-#endif
 #endif
 };
 

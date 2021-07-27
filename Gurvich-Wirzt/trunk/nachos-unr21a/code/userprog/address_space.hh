@@ -36,7 +36,7 @@ public:
     /// Parameters:
     /// * `executable_file` is the open file that corresponds to the
     ///   program; it contains the object code to load into memory.
-    AddressSpace(OpenFile *executable_file, OpenFile *swap_file); // Si no hay swap ni siquiera se usa
+    AddressSpace(OpenFile *executable_file, unsigned pid); // Si no hay swap ni siquiera se usa
 
     /// De-allocate an address space.
     ~AddressSpace();
@@ -60,6 +60,8 @@ public:
     SwappedList *swapped;
     OpenFile *swap;
     void WriteToSwap(unsigned vpn, unsigned phy);
+    char nombreswap[20];
+
 #endif
 
 #endif
