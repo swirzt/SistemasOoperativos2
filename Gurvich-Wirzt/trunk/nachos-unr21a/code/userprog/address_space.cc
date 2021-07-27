@@ -15,6 +15,8 @@
 #ifdef SWAP
 #include <stdlib.h>
 #include "vmem/swappedlist.hh"
+#include <inttypes.h>
+#include <iostream>
 #endif
 
 unsigned int AddressSpace::Translate(unsigned int virtualAddr)
@@ -25,10 +27,37 @@ unsigned int AddressSpace::Translate(unsigned int virtualAddr)
   return physicalPage * PAGE_SIZE + offset;
 }
 
+#ifdef SWAP
+unsigned charlen(char *word)
+{
+  unsigned i = 0;
+  while (*(word + i++))
+    ;
+  return i;
+}
+
+void swapName(int pid, char *name)
+{
+  name[0] = 'S';
+  name[1] = 'W';
+  name[2] = 'A';
+  name[3] = 'P';
+  name[4] = '.';
+  char pidc[20];
+  std::sprintf(pidc, "%d", pid);
+  int i, len = charlen(pidc);
+  for (i = 0; i < len + 1; i++)
+  {
+    name[i + 5] = pidc[i];
+  }
+  // name[i + 5] = '\0';
+}
+#endif
+
 /// First, set up the translation from program memory to physical memory.
 /// For now, this is really simple (1:1), since we are only uniprogramming,
 /// and we have a single unsegmented page table.
-AddressSpace::AddressSpace(OpenFile *executable_file, OpenFile *swap_file)
+AddressSpace::AddressSpace(OpenFile *executable_file, unsigned pid)
 {
   ASSERT(executable_file != nullptr);
 
@@ -43,8 +72,11 @@ AddressSpace::AddressSpace(OpenFile *executable_file, OpenFile *swap_file)
   size = numPages * PAGE_SIZE;
 
 #ifdef SWAP
+  swapName(pid, nombreswap);
+  fileSystem->Create(nombreswap, 0);
+  swap = fileSystem->Open(nombreswap);
+
   swapped = new SwappedList(numPages);
-  swap = swap_file;
 #else
   ASSERT(numPages <= pages->CountClear()); // Porque me gusta
 #endif
@@ -138,6 +170,7 @@ AddressSpace::~AddressSpace()
   }
   delete[] pageTable;
 #ifdef SWAP
+  fileSystem->Remove(nombreswap);
   delete swap;
 #endif
 }
@@ -184,9 +217,7 @@ void AddressSpace::SaveState()
     if (tlb[i].valid)
     {
       unsigned vpn = tlb[i].virtualPage;
-      pageTable[vpn].dirty = tlb[i].dirty;
-      pageTable[vpn].use = tlb[i].use;
-      pageTable[vpn].valid = tlb[i].valid;
+      pageTable[vpn] = tlb[i];
     }
   }
 #endif
@@ -235,7 +266,6 @@ void AddressSpace::LoadPage(int vpn)
     unsigned tokillPID = tokill[1];                                    // Este es el PID del Proceso
     unsigned tokillVPN = tokill[0];                                    // Esta es la VPN para de la pagina fisica para ese proceso
     activeThreads->Get(tokillPID)->space->WriteToSwap(tokillVPN, phy); // Le decimos al proceso que guarde su página
-    printf("%d\n", activeThreads->Get(tokillPID)->space->pageTable[tokillVPN].dirty);
   }
 
 #endif
@@ -292,6 +322,7 @@ void AddressSpace::LoadPage(int vpn)
   }
   else
   {
+    printf("Che estoy leyendo del swap %d %d\n", phy, whereswap);
     swap->ReadAt(&mainMemory[phy * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE);
   }
 #endif
@@ -300,27 +331,26 @@ void AddressSpace::LoadPage(int vpn)
 #ifdef SWAP
 void AddressSpace::WriteToSwap(unsigned vpn, unsigned phy)
 {
-  // if (currentThread->space == this)
-  TranslationEntry *tlb = machine->GetMMU()->tlb;
-  bool dirtyTlb = false;
-
-  for (int i = 0; i < TLB_SIZE; i++)
+  if (currentThread->space == this)
   {
-    if (tlb[i].physicalPage == phy)
+    TranslationEntry *tlb = machine->GetMMU()->tlb;
+    for (unsigned i = 0; i < TLB_SIZE; i++)
     {
-      dirtyTlb = tlb[i].dirty;
+      if (tlb[i].physicalPage == phy && tlb[i].valid)
+      {
+        pageTable[vpn] = tlb[i];
+        // tlb[i].valid = false;
+      }
     }
   }
-  if (dirtyTlb || pageTable[vpn].dirty) //Si no esta dirty la puedo dejar sin problemas
+  if (pageTable[vpn].dirty)
   {
-    printf("Aca entre\n");
     int whereswap = swapped->Find(vpn);
     if (whereswap == -1)
       whereswap = swapped->Add(vpn);
 
     char *mainMemory = machine->GetMMU()->mainMemory;
-
-    ASSERT(swap->WriteAt(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE));
+    swap->WriteAt(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE);
     pageTable[vpn].dirty = false;
   }
   pageTable[vpn].valid = false;
