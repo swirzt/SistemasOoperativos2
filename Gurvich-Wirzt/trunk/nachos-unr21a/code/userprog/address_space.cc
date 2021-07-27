@@ -170,6 +170,7 @@ AddressSpace::~AddressSpace()
   }
   delete[] pageTable;
 #ifdef SWAP
+  fileSystem->Remove(nombreswap);
   delete swap;
 #endif
 }
