@@ -27,6 +27,11 @@ Statistics::Statistics()
     tlbHit = 0;
     tlbMiss = 0;
 #endif
+
+#ifdef SWAP
+    toSwap = 0;
+    fromSwap = 0;
+#endif
 }
 
 /// Print performance metrics, when we have finished everything at system
@@ -41,10 +46,11 @@ void Statistics::Print()
                tickResets);
     }
 #endif
-// Mi companero dice que nunca son 0 las 2
-// Soy el companero y creo que es asi
 #ifdef USE_TLB
     printf("TLB: hits %lu, miss %lu, hit ratio %.2f\n", (tlbHit - tlbMiss), tlbMiss, ((float)tlbHit - (float)tlbMiss) / (float)tlbHit);
+#endif
+#ifdef SWAP
+    printf("Pages to SWAP: %lu, Pages from SWAP: %lu\n", toSwap, fromSwap);
 #endif
     printf("Ticks: total %lu, idle %lu, system %lu, user %lu\n",
            totalTicks, idleTicks, systemTicks, userTicks);

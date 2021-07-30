@@ -78,7 +78,7 @@ AddressSpace::AddressSpace(OpenFile *executable_file, unsigned pid)
 
   swapped = new SwappedList(numPages);
 #else
-  ASSERT(numPages <= pages->CountClear()); // Porque me gusta
+  ASSERT(numPages <= pages->CountClear()); // Si no hay swap necesitamos que el programa entre en memeoria
 #endif
   // Check we are not trying to run anything too big -- at least until we
   // have virtual memory.
@@ -95,7 +95,6 @@ AddressSpace::AddressSpace(OpenFile *executable_file, unsigned pid)
 #ifndef DEMAND_LOADING
     int phy = pages->Find();
     // // Queremos que la máquina cierre por ahora (hasta tener virtual)
-    // ASSERT(phy != -1);
     pageTable[i].physicalPage = phy;
     pageTable[i].valid = true;
 #else
@@ -157,6 +156,7 @@ AddressSpace::AddressSpace(OpenFile *executable_file, unsigned pid)
   }
 #endif
 }
+
 /// Deallocate an address space.
 ///
 /// Nothing for now!
@@ -165,7 +165,7 @@ AddressSpace::~AddressSpace()
   for (unsigned i = 0; i < numPages; i++)
   {
     int phy = pageTable[i].physicalPage;
-    if (phy != -1)
+    if (pageTable[i].valid && phy != -1)
       pages->Clear(phy);
   }
   delete[] pageTable;
@@ -223,12 +223,74 @@ void AddressSpace::SaveState()
 #endif
 }
 
+unsigned nextVictim = 0;
+
 //Random swap policy
 #ifdef SWAP
 int PickVictim()
 {
+#ifdef POLICY_RANDOM_PICK
+  DEBUG('e', "Policy RANDOM PICK selected\n");
   return rand() % NUM_PHYS_PAGES;
+#endif
+
+#ifdef POLICY_FIFO
+  DEBUG('e', "Policy FIFO selected\n");
+  int position = nextVictim;
+  nextVictim = (nextVictim + 1) % NUM_PHYS_PAGES;
+  return position;
+#endif
+
+#ifdef POLICY_CLOCK
+  DEBUG('e', "Policy CLOCK selected\n");
+  currentThread->space->SaveState();
+  for (int ronda = 1; ronda < 5; ronda++)
+  {
+    for (unsigned pos = nextVictim; pos < nextVictim + NUM_PHYS_PAGES; pos++)
+    {
+      int *checkReplace = pages->GetOwner(pos % NUM_PHYS_PAGES);
+      int checkReplacePID = checkReplace[1];
+      int checkReplaceVPN = checkReplace[0];
+      TranslationEntry *entry = &(activeThreads->Get(checkReplacePID)->space->pageTable[checkReplaceVPN]);
+      switch (ronda)
+      {
+      case 1:
+        if (!entry->use && !entry->dirty)
+        {
+          nextVictim = (pos + 1) % NUM_PHYS_PAGES;
+          return pos % NUM_PHYS_PAGES;
+        }
+        break;
+      case 2:
+        if (!entry->use && entry->dirty)
+        {
+          nextVictim = (pos + 1) % NUM_PHYS_PAGES;
+          entry->use = false;
+          return pos % NUM_PHYS_PAGES;
+        }
+        break;
+      case 3:
+        if (!entry->use && !entry->dirty)
+        {
+          nextVictim = (pos + 1) % NUM_PHYS_PAGES;
+          return pos % NUM_PHYS_PAGES;
+        }
+        break;
+      case 4:
+        if (!entry->use && entry->dirty)
+        {
+          nextVictim = (pos + 1) % NUM_PHYS_PAGES;
+          return pos % NUM_PHYS_PAGES;
+        }
+        break;
+      }
+    }
+  }
+  nextVictim = (nextVictim + 1) % NUM_PHYS_PAGES; //Pa calmar al GCC
+  return nextVictim;
+#endif
 }
+
 #endif
 
 /// On a context switch, restore the machine state so that this address space
@@ -252,7 +314,6 @@ void AddressSpace::RestoreState()
 void AddressSpace::LoadPage(int vpn)
 {
   char *mainMemory = machine->GetMMU()->mainMemory;
-
 #ifndef SWAP
   int phy = pages->Find();
   if (phy == -1)
@@ -262,10 +323,12 @@ void AddressSpace::LoadPage(int vpn)
   if (phy == -1)
   {
     phy = PickVictim();
-    unsigned *tokill = pages->GetOwner(phy);
-    unsigned tokillPID = tokill[1];                                    // Este es el PID del Proceso
-    unsigned tokillVPN = tokill[0];                                    // Esta es la VPN para de la pagina fisica para ese proceso
+    int *tokill = pages->GetOwner(phy);
+    int tokillPID = tokill[1];                                         // Este es el PID del Proceso
+    int tokillVPN = tokill[0];                                         // Esta es la VPN para de la pagina fisica para ese proceso
     activeThreads->Get(tokillPID)->space->WriteToSwap(tokillVPN, phy); // Le decimos al proceso que guarde su página
+    // pages->Clear(phy); //No es necesaria porque Mark sobreescribe, no le importa si no está limpia
+    pages->Mark(phy, vpn, currentThread->pid);
   }
 
 #endif
@@ -322,14 +385,14 @@ void AddressSpace::LoadPage(int vpn)
   }
   else
   {
-    printf("Che estoy leyendo del swap %d %d\n", phy, whereswap);
     swap->ReadAt(&mainMemory[phy * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE);
+    stats->fromSwap++;
   }
 #endif
 }
 
 #ifdef SWAP
-void AddressSpace::WriteToSwap(unsigned vpn, unsigned phy)
+void AddressSpace::WriteToSwap(unsigned vpn, int phy)
 {
   if (currentThread->space == this)
   {
@@ -339,7 +402,7 @@ void AddressSpace::WriteToSwap(unsigned vpn, unsigned phy)
       if (tlb[i].physicalPage == phy && tlb[i].valid)
       {
         pageTable[vpn] = tlb[i];
-        // tlb[i].valid = false;
+        tlb[i].valid = false;
       }
     }
   }
@@ -352,6 +415,7 @@ void AddressSpace::WriteToSwap(unsigned vpn, unsigned phy)
     char *mainMemory = machine->GetMMU()->mainMemory;
     swap->WriteAt(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, whereswap * PAGE_SIZE);
     pageTable[vpn].dirty = false;
+    stats->toSwap++;
   }
   pageTable[vpn].valid = false;
 }

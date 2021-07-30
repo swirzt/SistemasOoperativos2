@@ -239,8 +239,7 @@ int Disk::ComputeLatency(unsigned newSector, bool writing)
     unsigned seek = TimeToSeek(newSector, &rotation);
     unsigned timeAfter = stats->totalTicks + seek + rotation;
 
-#ifndef NOTRACKBUF // Turn this on if you do not want the track buffer \
-                   // stuff.
+#ifndef NOTRACKBUF // Turn this on if you do not want the track buffer stuff.
     // Check if track buffer applies.
     if (!writing && seek == 0 && (timeAfter - bufferInit) / ROTATION_TIME > ModuloDiff(newSector, bufferInit / ROTATION_TIME))
     {

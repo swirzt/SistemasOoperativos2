@@ -52,14 +52,16 @@ public:
 
     unsigned CountClear();
 
-    unsigned *GetOwner(unsigned phys);
+    int *GetOwner(unsigned phys);
+
+    void Print();
 
 private:
     /// Number of entries in the bitmap.
     unsigned numEntries;
 
     /// Pair storage.
-    unsigned **map;
+    int **map;
 };
 
 #endif

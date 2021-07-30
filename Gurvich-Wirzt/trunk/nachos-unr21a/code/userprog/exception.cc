@@ -310,11 +310,11 @@ SyscallHandler(ExceptionType _et)
         int returnValue = machine->ReadRegister(4);
         if (returnValue == 0)
         {
-            DEBUG('e', "Execution termintated normally for thread %s \n", currentThread->GetName());
+            DEBUG('e', "Execution terminated normally for thread %s \n", currentThread->GetName());
         }
         else
         {
-            DEBUG('e', "Execution termintated abnormally for thread %s \n", currentThread->GetName());
+            DEBUG('e', "Execution terminated abnormally for thread %s return: %d\n", currentThread->GetName(), returnValue);
         }
         currentThread->Finish(returnValue);
         break;
@@ -419,7 +419,7 @@ SyscallHandler(ExceptionType _et)
             break;
         }
 
-        char filename[FILE_NAME_MAX_LEN + 1];
+        char *filename = new char[FILE_NAME_MAX_LEN + 1];
         if (!ReadStringFromUser(filenameAddr,
                                 filename, sizeof filename))
         {
@@ -429,7 +429,6 @@ SyscallHandler(ExceptionType _et)
         }
 
         OpenFile *archivo = fileSystem->Open(filename);
-        DEBUG('e', "\\ 0? %d \n", filename[0] == '\0');
         DEBUG('e', "Filename is %s \n", filename);
 
         if (archivo == nullptr)
@@ -471,6 +470,8 @@ unsigned int tlbSelection = 0;
 static void
 PageFaultHandler(ExceptionType _et)
 {
+    // printf("Por cargar----------------\n");
+    // machine->GetMMU()->PrintTLB();
     int addr = machine->ReadRegister(BAD_VADDR_REG);
     int vpn = addr / PAGE_SIZE;
     TranslationEntry *entry = &(currentThread->space->pageTable[vpn]);
@@ -479,12 +480,16 @@ PageFaultHandler(ExceptionType _et)
         currentThread->space->LoadPage(vpn);
 #endif
     TranslationEntry entrytlb = machine->GetMMU()->tlb[tlbSelection % TLB_SIZE];
-    unsigned mmuvpn = entrytlb.virtualPage;
     if (entrytlb.valid)
+    {
+        unsigned mmuvpn = entrytlb.virtualPage;
         currentThread->space->pageTable[mmuvpn] = entrytlb;
+    }
     machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = *entry;
     tlbSelection++;
     stats->tlbMiss++;
+    // printf("Ya cargado-----------------\n");
+    // machine->GetMMU()->PrintTLB();
 }
 #endif
 

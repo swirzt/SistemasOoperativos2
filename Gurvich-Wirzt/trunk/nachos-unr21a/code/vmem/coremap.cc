@@ -19,10 +19,10 @@ Coremap::Coremap(unsigned nitems)
     ASSERT(nitems > 0);
 
     numEntries = nitems;
-    map = new unsigned *[numEntries];
+    map = new int *[numEntries];
     for (unsigned i = 0; i < numEntries; i++)
     {
-        map[i] = new unsigned[2];
+        map[i] = new int[2];
         map[i][0] = -1;
         map[i][1] = -1;
     }
@@ -100,7 +100,17 @@ unsigned Coremap::CountClear()
 }
 
 /// Return the info of an entry
-unsigned *Coremap::GetOwner(unsigned phys)
+int *Coremap::GetOwner(unsigned phys)
 {
     return map[phys];
+}
+
+void Coremap::Print()
+{
+    printf("Coremap de size %d\n", numEntries);
+    for (unsigned i = 0; i < numEntries; i++)
+    {
+        printf("%d %d\n", map[i][0], map[i][1]);
+    }
+    printf("-------------------------\n");
 }

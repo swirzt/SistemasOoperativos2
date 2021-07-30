@@ -64,6 +64,13 @@ public:
   unsigned long tlbMiss;
 #endif
 
+#ifdef SWAP
+  /// Number of pages sent to SWAP
+  unsigned long toSwap;
+  /// Number of pages retrieved from SWAP
+  unsigned long fromSwap;
+#endif
+
   /// Initialize everything to zero.
   Statistics();
 
