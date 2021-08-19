@@ -299,6 +299,7 @@ void Initialize(int argc, char **argv)
 void Cleanup()
 {
     DEBUG('i', "Cleaning up...\n");
+    stats->Print();
 
     // 2007, Jose Miguel Santos Espino
     delete preemptiveScheduler;
@@ -325,6 +326,5 @@ void Cleanup()
     delete timer;
     delete scheduler;
     delete interrupt;
-
     exit(0);
 }

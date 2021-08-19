@@ -7,7 +7,7 @@
 #define NACHOS_FILESYS_DIRECTORYENTRY__HH
 
 /// For simplicity, we assume file names are <= 9 characters long.
-const unsigned FILE_NAME_MAX_LEN = 25;
+const unsigned FILE_NAME_MAX_LEN = 40;
 
 /// The following class defines a "directory entry", representing a file in
 /// the directory.  Each entry gives the name of the file, and where the

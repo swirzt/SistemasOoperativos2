@@ -230,19 +230,19 @@ unsigned nextVictim = 0;
 int PickVictim()
 {
 #ifdef POLICY_RANDOM_PICK
-  DEBUG('e', "Policy RANDOM PICK selected\n");
+  // DEBUG('e', "Policy RANDOM PICK selected\n");
   return rand() % NUM_PHYS_PAGES;
 #endif
 
 #ifdef POLICY_FIFO
-  DEBUG('e', "Policy FIFO selected\n");
+  // DEBUG('e', "Policy FIFO selected\n");
   int position = nextVictim;
   nextVictim = (nextVictim + 1) % NUM_PHYS_PAGES;
   return position;
 #endif
 
 #ifdef POLICY_CLOCK
-  DEBUG('e', "Policy CLOCK selected\n");
+  // DEBUG('e', "Policy CLOCK selected\n");
   currentThread->space->SaveState();
   for (int ronda = 1; ronda < 5; ronda++)
   {
@@ -265,9 +265,10 @@ int PickVictim()
         if (!entry->use && entry->dirty)
         {
           nextVictim = (pos + 1) % NUM_PHYS_PAGES;
-          entry->use = false;
           return pos % NUM_PHYS_PAGES;
         }
+        else
+          entry->use = false;
         break;
       case 3:
         if (!entry->use && !entry->dirty)
@@ -335,7 +336,6 @@ void AddressSpace::LoadPage(int vpn)
 
   pageTable[vpn].physicalPage = phy;
   pageTable[vpn].valid = true;
-  memset(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], 0, PAGE_SIZE); //Solo cuando es la pila
   unsigned int vaddrinit = vpn * PAGE_SIZE;
 
 #ifdef SWAP
@@ -344,42 +344,30 @@ void AddressSpace::LoadPage(int vpn)
   if (whereswap == -1)
   {
 #endif
-    if (vaddrinit <= size - USER_STACK_SIZE) // size es getSize + USER_STACK_SIZE
-    {
-      uint32_t dataSizeI = exe->GetInitDataSize();
-      uint32_t dataSizeU = exe->GetUninitDataSize();
-      uint32_t dataAddr = exe->GetInitDataAddr();
+    uint32_t dataSize = exe->GetInitDataSize();
+    uint32_t dataAddr = exe->GetInitDataAddr();
+    uint32_t codeSize = exe->GetCodeSize();
+    uint32_t codeAddr = exe->GetCodeAddr();
 
-      if (dataSizeI + dataSizeU == 0) // No hay sección Data
-      {
-        exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit);
-      }
-      else if (vaddrinit < dataAddr && dataSizeI + dataSizeU > 0) // Hay data y estamos en codeBlock
-      {
-        if (vaddrinit + PAGE_SIZE >= dataAddr) // Arranca en code termina en Data
-        {
-          unsigned leercode = dataAddr - vaddrinit;
-          unsigned leerdata = PAGE_SIZE - leercode;
-          exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leercode, vaddrinit);
-          exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE] + leercode, leerdata, 0);
-        }
-        else // Esta todo en Code
-        {
-          exe->ReadCodeBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit);
-        }
-      }
-      else if (vaddrinit < dataAddr + dataSizeI && vaddrinit >= dataAddr && dataSizeI + dataSizeU > 0) // Estamos en data Init
-      {
-        if (vaddrinit + PAGE_SIZE >= dataAddr + dataSizeI)
-        { // Arranca en init, termina afuera
-          unsigned leerInit = dataAddr + dataSizeI - vaddrinit;
-          exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], leerInit, vaddrinit - dataAddr);
-        }
-        else // Esta todo en data Init
-        {
-          exe->ReadDataBlock(&mainMemory[pageTable[vpn].physicalPage * PAGE_SIZE], PAGE_SIZE, vaddrinit - dataAddr);
-        }
-      }
+    unsigned int codeCopy = 0;
+    if (codeSize > 0 && codeSize + codeAddr > vaddrinit) // Tengo que leer algo en Code
+    {
+      codeCopy = codeSize - vaddrinit;
+      codeCopy = codeCopy > PAGE_SIZE ? PAGE_SIZE : codeCopy; // Reviso que no se pase de una página
+      exe->ReadCodeBlock(&mainMemory[phy * PAGE_SIZE], codeCopy, vaddrinit - codeAddr);
+    }
+    unsigned int dataCopy = 0;
+    if (codeCopy < PAGE_SIZE && dataSize > 0 && vaddrinit < dataAddr + dataSize) // Tengo que leer data inicializada
+    {
+      int offset = codeCopy > 0 ? 0 : vaddrinit - dataAddr;
+      dataCopy = PAGE_SIZE - codeCopy;
+      dataCopy = dataCopy + vaddrinit + codeCopy > dataSize + dataAddr ? dataSize + dataAddr - (vaddrinit + codeCopy) : dataCopy; // Si lo que tengo que leer se pasa de data inicializada, achico la lectura
+      exe->ReadDataBlock(&mainMemory[phy * PAGE_SIZE + codeCopy], dataCopy, offset);
+    }
+    unsigned int copied = codeCopy + dataCopy;
+    if (copied < PAGE_SIZE) // Pongo en 0 la memoria para data no inicializada o STACK
+    {
+      memset(&mainMemory[phy * PAGE_SIZE + copied], 0, PAGE_SIZE - copied);
     }
 #ifdef SWAP
   }
@@ -420,5 +408,4 @@ void AddressSpace::WriteToSwap(unsigned vpn, int phy)
   pageTable[vpn].valid = false;
 }
 #endif
-
 #endif

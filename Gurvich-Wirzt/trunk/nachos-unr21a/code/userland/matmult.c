@@ -9,7 +9,7 @@
 #include "lib.c"
 
 /// Sum total of the arrays does not fit in physical memory.
-#define DIM 20
+#define DIM 40
 
 static int A[DIM][DIM];
 static int B[DIM][DIM];
@@ -43,7 +43,5 @@ int main(void)
     }
 
     // And then we are done.
-    putsNachos("Funciona el &\n"); //Si saco esto explota
-    // int p = 0;
     return C[DIM - 1][DIM - 1];
 }

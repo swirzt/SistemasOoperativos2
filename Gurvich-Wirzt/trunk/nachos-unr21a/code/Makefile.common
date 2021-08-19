@@ -28,7 +28,7 @@
 # limitation of liability and disclaimer of warranty provisions.
 
 # Compilation and linking options.
-CXXFLAGS = -std=c++11 -g -Wall -Wshadow $(INCLUDE_DIRS) $(DEFINES) $(HOST)
+CXXFLAGS = -std=c++11 -Wall -Wshadow $(INCLUDE_DIRS) $(DEFINES) $(HOST)
 LDFLAGS  =
 
 # Name of the final executable file in each subdirectory.

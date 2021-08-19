@@ -470,8 +470,6 @@ unsigned int tlbSelection = 0;
 static void
 PageFaultHandler(ExceptionType _et)
 {
-    // printf("Por cargar----------------\n");
-    // machine->GetMMU()->PrintTLB();
     int addr = machine->ReadRegister(BAD_VADDR_REG);
     int vpn = addr / PAGE_SIZE;
     TranslationEntry *entry = &(currentThread->space->pageTable[vpn]);
@@ -488,8 +486,6 @@ PageFaultHandler(ExceptionType _et)
     machine->GetMMU()->tlb[tlbSelection % TLB_SIZE] = *entry;
     tlbSelection++;
     stats->tlbMiss++;
-    // printf("Ya cargado-----------------\n");
-    // machine->GetMMU()->PrintTLB();
 }
 #endif
 

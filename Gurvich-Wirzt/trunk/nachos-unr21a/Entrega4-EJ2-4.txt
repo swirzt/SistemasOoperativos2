@@ -1,0 +1,82 @@
+Ejercicio 2)
+
+Ejecutamos un matmult con DIM = 40
+
+------------32
+TLB: hits 5514689, miss 81757, hit ratio 0.99
+
+------------64
+TLB: hits 5523660, miss 825, hit ratio 1.00
+
+Notamos que si bien el hit ratio no varía mucho, la cantidad de misses disminuye considerablemente cuando contamos con más página en la TLB
+En nuestras pruebas y ejecuciones no notamos una variacion considerable en la ejecucion de los programas, por lo que creemos que con 32 entradas 
+
+Ejercicio 4-6) Probando SWAP
+
+RANDOM_PICK
+matmult:
+[e] Execution terminated abnormally for thread main return: 60840
+TLB: hits 5481159, miss 150440, hit ratio 0.97
+Pages to SWAP: 25306, Pages from SWAP: 108475
+
+sort:
+[e] Execution terminated abnormally for thread main return: 1023
+TLB: hits 22073024, miss 15737, hit ratio 1.00
+Pages to SWAP: 10604, Pages from SWAP: 12596
+
+matmult sort consecutivos:
+TLB: hits 27556153, miss 165952, hit ratio 0.99
+Pages to SWAP: 35873, Pages from SWAP: 120931
+
+matmult sort concurrentes:
+TLB: hits 27263425, miss 707146, hit ratio 0.97
+Pages to SWAP: 119995, Pages from SWAP: 261449
+
+
+
+
+FIFO
+matmult:
+[e] Execution terminated abnormally for thread main return: 60840
+TLB: hits 5482448, miss 145374, hit ratio 0.97
+Pages to SWAP: 26461, Pages from SWAP: 105871
+
+sort:
+[e] Execution terminated abnormally for thread main return: 1023
+TLB: hits 22073856, miss 13195, hit ratio 1.00
+Pages to SWAP: 9604, Pages from SWAP: 10763
+
+matmult sort consecutivos:
+TLB: hits 27557587, miss 158694, hit ratio 0.99
+Pages to SWAP: 36078, Pages from SWAP: 116640
+
+matmult sort concurrentes:
+[e] Execution terminated abnormally for thread matmult return: 60840
+[e] Execution terminated abnormally for thread sort return: 1023
+TLB: hits 27277375, miss 664354, hit ratio 0.98
+Pages to SWAP: 147487, Pages from SWAP: 282868
+
+
+
+
+
+POLICY_CLOCK
+matmult:
+[e] Execution terminated abnormally for thread main return: 60840
+TLB: hits 5481938, miss 127483, hit ratio 0.98
+Pages to SWAP: 537, Pages from SWAP: 80107
+
+sort:
+[e] Execution terminated abnormally for thread main return: 1023
+TLB: hits 22045329, miss 42175, hit ratio 1.00
+Pages to SWAP: 8395, Pages from SWAP: 19123
+
+matmult sort consecutivos:
+TLB: hits 27529092, miss 169842, hit ratio 0.99
+Pages to SWAP: 8942, Pages from SWAP: 99351
+
+matmult sort concurrentes:
+[e] Execution terminated abnormally for thread matmult return: 60840
+[e] Execution terminated abnormally for thread sort return: 1023
+TLB: hits 27288846, miss 625429, hit ratio 0.98
+Pages to SWAP: 59150, Pages from SWAP: 201778
