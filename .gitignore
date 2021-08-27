@@ -21,3 +21,5 @@ Gurvich-Wirzt/trunk/nachos-unr21a/code/userland/cat
 Gurvich-Wirzt/tags/*
 Gurvich-Wirzt/.svn/*
 Gurvich-Wirzt/trunk/nachos-unr21a/code/userland/testtlb
+Gurvich-Wirzt/trunk/nachos-unr21a/code/filesys/DISK
+SWAP.*
