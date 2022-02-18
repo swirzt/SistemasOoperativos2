@@ -3,6 +3,12 @@
 #include "lock.hh"
 #include "system.hh"
 
+/*
+Un canal permite transmitir datos de tamaño de un char entre 2 threads
+Para hacerlo, el emisor y el receptor deben tomar el lock que le corresponde a cada uno
+Luego por medio de una barrera se sincroniza el envío del mensaje
+*/
+
 Channel::Channel(const char *debugname)
 {
     name = debugname;

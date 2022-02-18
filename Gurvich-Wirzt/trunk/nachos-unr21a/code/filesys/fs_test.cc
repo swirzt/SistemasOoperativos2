@@ -91,7 +91,7 @@ Print(const char *name)
     int amountRead;
     while ((amountRead = openFile->Read(buffer, TRANSFER_SIZE)) > 0) {
         for (unsigned i = 0; i < (unsigned) amountRead; i++) {
-            printf("%c", buffer[i]);
+            putchar(buffer[i]);
         }
     }
 
