@@ -7,12 +7,11 @@
 #ifndef NACHOS_LIB_TABLE__HH
 #define NACHOS_LIB_TABLE__HH
 
-
 #include "list.hh"
 
-
 template <class T>
-class Table {
+class Table
+{
 public:
     static const unsigned SIZE = 20;
 
@@ -32,6 +31,9 @@ public:
 
     /// Check whether the table is empty.
     bool IsEmpty() const;
+
+    /// Give the current table size
+    int getSize() const;
 
     /// Remove the item associated with a given index.
     ///
@@ -60,36 +62,37 @@ private:
     List<int> freed;
 };
 
-
 template <class T>
 Table<T>::Table()
 {
     current = 0;
 }
 
-
 template <class T>
-int
-Table<T>::Add(T item)
+int Table<T>::Add(T item)
 {
     int i;
 
-    if (!freed.IsEmpty()) {
+    if (!freed.IsEmpty())
+    {
         i = freed.Pop();
         data[i] = item;
         return i;
-    } else if (current < static_cast<int>(SIZE)) {
+    }
+    else if (current < static_cast<int>(SIZE))
+    {
         i = current++;
         data[i] = item;
         return i;
-    } else {
+    }
+    else
+    {
         return -1;
     }
 }
 
 template <class T>
-T
-Table<T>::Get(int i) const
+T Table<T>::Get(int i) const
 {
     ASSERT(i >= 0);
 
@@ -97,8 +100,7 @@ Table<T>::Get(int i) const
 }
 
 template <class T>
-bool
-Table<T>::HasKey(int i) const
+bool Table<T>::HasKey(int i) const
 {
     ASSERT(i >= 0);
 
@@ -106,38 +108,46 @@ Table<T>::HasKey(int i) const
 }
 
 template <class T>
-bool
-Table<T>::IsEmpty() const
+bool Table<T>::IsEmpty() const
 {
     return current == 0;
 }
 
 template <class T>
-T
-Table<T>::Remove(int i)
+int Table<T>::getSize() const
+{
+    return current;
+}
+
+template <class T>
+T Table<T>::Remove(int i)
 {
     ASSERT(i >= 0);
 
-    if (!HasKey(i)) {
+    if (!HasKey(i))
+    {
         return T();
     }
 
-    if (i == current - 1) {
+    if (i == current - 1)
+    {
         current--;
-        for (int j = current - 1; j >= 0 && !HasKey(j); j--) {
+        for (int j = current - 1; j >= 0 && !HasKey(j); j--)
+        {
             ASSERT(freed.Has(j));
             freed.SortedPop(&j);
             current--;
         }
-    } else {
+    }
+    else
+    {
         freed.SortedInsert(i, i);
     }
     return data[i];
 }
 
 template <class T>
-T
-Table<T>::Update(int i, T item)
+T Table<T>::Update(int i, T item)
 {
     ASSERT(i >= 0);
     ASSERT(i < current);
@@ -147,6 +157,5 @@ Table<T>::Update(int i, T item)
     data[i] = item;
     return previous;
 }
-
 
 #endif

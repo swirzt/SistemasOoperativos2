@@ -194,6 +194,14 @@ void Thread::Finish(int returnValue)
     interrupt->SetLevel(INT_OFF);
     ASSERT(this == currentThread);
 
+#ifdef USER_PROGRAM
+    if (activeThreads->getSize() == 1)
+    {
+        printf("Last thread finished with console ON, halting!\n");
+        interrupt->Halt();
+    }
+#endif
+
     DEBUG('t', "Finishing thread \"%s\"\n", GetName());
 
     if (joinable)
@@ -342,7 +350,7 @@ OpenFile *Thread::getFile(int fileNumber)
     return openFiles->Get(fileNumber);
 }
 
-//Check if a file exists
+// Check if a file exists
 bool Thread::fileExists(int filenumber)
 {
     return openFiles->HasKey(filenumber);
