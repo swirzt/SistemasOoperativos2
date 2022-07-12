@@ -64,8 +64,8 @@ DefaultHandler(ExceptionType et)
 // Initializes a forked thread
 void initialize(void *args)
 {
-    currentThread->space->InitRegisters(); //Initialize registers
-    currentThread->space->RestoreState();  //Copy the father's state
+    currentThread->space->InitRegisters(); // Initialize registers
+    currentThread->space->RestoreState();  // Copy the father's state
 
     if (args != nullptr)
     {
@@ -76,7 +76,7 @@ void initialize(void *args)
         machine->WriteRegister(STACK_REG, sp - 24); // Restamos 24 como nos recomienda el archivo args.hh
     }
 
-    machine->Run(); //Run the program
+    machine->Run(); // Run the program
 }
 
 /// Handle a system call exception.
@@ -207,7 +207,7 @@ SyscallHandler(ExceptionType _et)
         {
             DEBUG('e', "Requested to read from console\n");
             synchconsole->ReadBuffer(bufferSys, size);
-            char algo = bufferSys[size]; //Esto hace que el debug imprima lindo
+            char algo = bufferSys[size]; // Esto hace que el debug imprima lindo
             bufferSys[size] = '\0';
             DEBUG('e', "Read from console: %s \n", bufferSys);
             bufferSys[size] = algo; // Dejo el buffer como estaba
@@ -419,12 +419,15 @@ SyscallHandler(ExceptionType _et)
             break;
         }
 
+        // Este tiene que ser un puntero para no perder informacion cuando salimos de la pila
+        // New nos lo almacena en heap
         char *filename = new char[FILE_NAME_MAX_LEN + 1];
         if (!ReadStringFromUser(filenameAddr,
-                                filename, sizeof filename))
+                                filename, FILE_NAME_MAX_LEN + 1))
         {
             DEBUG('e', "Error: filename string too long (maximum is %u bytes).\n",
                   FILE_NAME_MAX_LEN);
+            machine->WriteRegister(2, -1);
             break;
         }
 

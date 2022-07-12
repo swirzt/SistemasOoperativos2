@@ -59,6 +59,19 @@ extern FileSystem *fileSystem;
 #ifdef FILESYS
 #include "filesys/synch_disk.hh"
 extern SynchDisk *synchDisk;
+#include "threads/lock.hh"
+#include "threads/condition.hh"
+#include "lib/list.hh"
+typedef struct _OpenFileData
+{
+    OpenFile *file;
+    unsigned int numReaders;
+    unsigned int numWriters;
+    bool writerActive;
+    Lock *lock;
+    Condition *condition;
+} * OpenFilesData;
+extern OpenFilesData *openFilesData;
 #endif
 
 #ifdef NETWORK

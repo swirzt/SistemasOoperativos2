@@ -12,9 +12,8 @@
 /// All rights reserved.  See `copyright.h` for copyright notice and
 /// limitation of liability and disclaimer of warranty provisions.
 
-
 #include "synch_disk.hh"
-
+#include "system.hh"
 
 /// Disk interrupt handler.  Need this to be a C routine, because C++ cannot
 /// handle pointers to member functions.
@@ -22,7 +21,7 @@ static void
 DiskRequestDone(void *arg)
 {
     ASSERT(arg != nullptr);
-    SynchDisk *disk = (SynchDisk *) arg;
+    SynchDisk *disk = (SynchDisk *)arg;
     disk->RequestDone();
 }
 
@@ -51,15 +50,29 @@ SynchDisk::~SynchDisk()
 ///
 /// * `sectorNumber` is the disk sector to read.
 /// * `data` is the buffer to hold the contents of the disk sector.
-void
-SynchDisk::ReadSector(int sectorNumber, char *data)
+void SynchDisk::ReadSector(int sectorNumber, char *data)
 {
     ASSERT(data != nullptr);
 
-    lock->Acquire();  // Only one disk I/O at a time.
+    OpenFilesData sdata = openFilesData[sectorNumber];
+    // Algoritmo para empezar a leer ----
+    sdata->lock->Acquire();
+    while (sdata->numWriters > 0 || sdata->writerActive)
+        sdata->condition->Wait();
+    sdata->numReaders++;
+    sdata->lock->Release();
+    // fin de empezar a leer ----
+
     disk->ReadRequest(sectorNumber, data);
-    semaphore->P();   // Wait for interrupt.
-    lock->Release();
+    semaphore->P(); // Wait for interrupt.
+
+    // algoritmo para terminar de leer
+    sdata->lock->Acquire();
+    sdata->numReaders--;
+    if (sdata->numReaders == 0)
+        sdata->condition->Broadcast();
+    sdata->lock->Release();
+    // fin de terminar de leer
 }
 
 /// Write the contents of a buffer into a disk sector.  Return only
@@ -67,21 +80,34 @@ SynchDisk::ReadSector(int sectorNumber, char *data)
 ///
 /// * `sectorNumber` is the disk sector to be written.
 /// * `data` are the new contents of the disk sector.
-void
-SynchDisk::WriteSector(int sectorNumber, const char *data)
+void SynchDisk::WriteSector(int sectorNumber, const char *data)
 {
     ASSERT(data != nullptr);
 
-    lock->Acquire();  // only one disk I/O at a time
+    OpenFilesData sdata = openFilesData[sectorNumber];
+
+    // Algoritmo para empezar a escribir ----
+    sdata->lock->Acquire();
+    sdata->numWriters++;
+    while (sdata->numReaders > 0 || sdata->writerActive)
+        sdata->condition->Wait();
+    sdata->numWriters--;
+    sdata->writerActive = true;
+    sdata->lock->Release();
+
     disk->WriteRequest(sectorNumber, data);
-    semaphore->P();   // wait for interrupt
-    lock->Release();
+    semaphore->P(); // wait for interrupt
+
+    // Algoritmo para terminar de escribir ----
+    sdata->lock->Acquire();
+    sdata->writerActive = false;
+    sdata->condition->Broadcast();
+    sdata->lock->Release();
 }
 
 /// Disk interrupt handler.  Wake up any thread waiting for the disk
 /// request to finish.
-void
-SynchDisk::RequestDone()
+void SynchDisk::RequestDone()
 {
     semaphore->V();
 }

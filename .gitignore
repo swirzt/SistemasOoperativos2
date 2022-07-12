@@ -24,3 +24,7 @@ Gurvich-Wirzt/trunk/nachos-unr21a/code/userland/testtlb
 Gurvich-Wirzt/trunk/nachos-unr21a/code/filesys/DISK
 SWAP.*
 Gurvich-Wirzt/.svn/wc.db
+.vscode/targets.log
+.vscode/dryrun.log
+.vscode/configurationCache.log
+Gurvich-Wirzt/trunk/nachos-unr21a/code/userland/test.txt
