@@ -61,6 +61,9 @@ typedef void (*VoidNoArgFunctionPtr)();
 /// Global object for debug output.
 extern Debug debug;
 
+extern bool intcomp(int a, int b);
+extern bool strcomp(const char *s1, const char *s2);
+
 #define DEBUG(...) (debug.Print)(__FILE__, __LINE__, __func__, __VA_ARGS__)
 #define DEBUG_CONT (debug.PrintCont)
 

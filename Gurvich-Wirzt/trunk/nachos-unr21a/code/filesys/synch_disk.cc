@@ -54,25 +54,12 @@ void SynchDisk::ReadSector(int sectorNumber, char *data)
 {
     ASSERT(data != nullptr);
 
-    OpenFilesData sdata = openFilesData[sectorNumber];
-    // Algoritmo para empezar a leer ----
-    sdata->lock->Acquire();
-    while (sdata->numWriters > 0 || sdata->writerActive)
-        sdata->condition->Wait();
-    sdata->numReaders++;
-    sdata->lock->Release();
-    // fin de empezar a leer ----
+    lock->Acquire();
 
     disk->ReadRequest(sectorNumber, data);
     semaphore->P(); // Wait for interrupt.
 
-    // algoritmo para terminar de leer
-    sdata->lock->Acquire();
-    sdata->numReaders--;
-    if (sdata->numReaders == 0)
-        sdata->condition->Broadcast();
-    sdata->lock->Release();
-    // fin de terminar de leer
+    lock->Release();
 }
 
 /// Write the contents of a buffer into a disk sector.  Return only
@@ -84,25 +71,12 @@ void SynchDisk::WriteSector(int sectorNumber, const char *data)
 {
     ASSERT(data != nullptr);
 
-    OpenFilesData sdata = openFilesData[sectorNumber];
-
-    // Algoritmo para empezar a escribir ----
-    sdata->lock->Acquire();
-    sdata->numWriters++;
-    while (sdata->numReaders > 0 || sdata->writerActive)
-        sdata->condition->Wait();
-    sdata->numWriters--;
-    sdata->writerActive = true;
-    sdata->lock->Release();
+    lock->Acquire();
 
     disk->WriteRequest(sectorNumber, data);
     semaphore->P(); // wait for interrupt
 
-    // Algoritmo para terminar de escribir ----
-    sdata->lock->Acquire();
-    sdata->writerActive = false;
-    sdata->condition->Broadcast();
-    sdata->lock->Release();
+    lock->Release();
 }
 
 /// Disk interrupt handler.  Wake up any thread waiting for the disk

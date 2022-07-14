@@ -35,13 +35,11 @@
 #ifndef NACHOS_FILESYS_FILESYSTEM__HH
 #define NACHOS_FILESYS_FILESYSTEM__HH
 
-
 #include "open_file.hh"
 
-
-#ifdef FILESYS_STUB  // Temporarily implement file system calls as calls to
-                     // UNIX, until the real file system implementation is
-                     // available.
+#ifdef FILESYS_STUB // Temporarily implement file system calls as calls to
+                    // UNIX, until the real file system implementation is
+                    // available.
 
 /// Constant definitions with dummy values.  For the stub filesystem they
 /// are not required, but system information tools expects them to be
@@ -50,10 +48,9 @@ static const unsigned FREE_MAP_FILE_SIZE = 0;
 static const unsigned NUM_DIR_ENTRIES = 0;
 static const unsigned DIRECTORY_FILE_SIZE = 0;
 
-
-class FileSystem {
+class FileSystem
+{
 public:
-
     FileSystem(bool format) {}
 
     ~FileSystem() {}
@@ -63,7 +60,8 @@ public:
         ASSERT(name != nullptr);
 
         int fileDescriptor = SystemDep::OpenForWrite(name);
-        if (fileDescriptor == -1) {
+        if (fileDescriptor == -1)
+        {
             return false;
         }
         SystemDep::Close(fileDescriptor);
@@ -75,10 +73,11 @@ public:
         ASSERT(name != nullptr);
 
         int fileDescriptor = SystemDep::OpenForReadWrite(name, false);
-        if (fileDescriptor == -1) {
+        if (fileDescriptor == -1)
+        {
             return nullptr;
         }
-        return new OpenFile(fileDescriptor);
+        return new OpenFile(fileDescriptor, "dumm");
     }
 
     bool Remove(const char *name)
@@ -86,28 +85,23 @@ public:
         ASSERT(name != nullptr);
         return SystemDep::Unlink(name) == 0;
     }
-
 };
 
-#else  // FILESYS
-
+#else // FILESYS
 
 #include "directory_entry.hh"
 #include "machine/disk.hh"
-
 
 /// Initial file sizes for the bitmap and directory; until the file system
 /// supports extensible files, the directory size sets the maximum number of
 /// files that can be loaded onto the disk.
 static const unsigned FREE_MAP_FILE_SIZE = NUM_SECTORS / BITS_IN_BYTE;
 static const unsigned NUM_DIR_ENTRIES = 10;
-static const unsigned DIRECTORY_FILE_SIZE
-  = sizeof (DirectoryEntry) * NUM_DIR_ENTRIES;
+static const unsigned DIRECTORY_FILE_SIZE = sizeof(DirectoryEntry) * NUM_DIR_ENTRIES;
 
-
-class FileSystem {
+class FileSystem
+{
 public:
-
     /// Initialize the file system.  Must be called *after* `synchDisk` has
     /// been initialized.
     ///
@@ -136,14 +130,12 @@ public:
     void Print();
 
 private:
-    OpenFile *freeMapFile;  ///< Bit map of free disk blocks, represented as a
-                            ///< file.
-    OpenFile *directoryFile;  ///< “Root” directory -- list of file names,
-                              ///< represented as a file.
-      
+    OpenFile *freeMapFile;   ///< Bit map of free disk blocks, represented as a
+                             ///< file.
+    OpenFile *directoryFile; ///< “Root” directory -- list of file names,
+                             ///< represented as a file.
 };
 
 #endif
-
 
 #endif

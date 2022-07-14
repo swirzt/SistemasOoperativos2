@@ -70,8 +70,12 @@ typedef struct _OpenFileData
     bool writerActive;
     Lock *lock;
     Condition *condition;
+    bool deleted;
+    Lock *deleteLock;
 } * OpenFilesData;
-extern OpenFilesData *openFilesData;
+typedef LinkedList<const char *, OpenFilesData> OpenFilesList;
+extern OpenFilesList *openFilesData;
+
 #endif
 
 #ifdef NETWORK

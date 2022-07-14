@@ -19,17 +19,16 @@
 #ifndef NACHOS_FILESYS_OPENFILE__HH
 #define NACHOS_FILESYS_OPENFILE__HH
 
-
 #include "lib/utility.hh"
+#include "lib/linkedlist.hh"
 
-
-#ifdef FILESYS_STUB  // Temporarily implement calls to Nachos file system as
-                     // calls to UNIX!  See definitions listed under `#else`.
-class OpenFile {
+#ifdef FILESYS_STUB // Temporarily implement calls to Nachos file system as
+                    // calls to UNIX!  See definitions listed under `#else`.
+class OpenFile
+{
 public:
-
     /// Open the file.
-    OpenFile(int f)
+    OpenFile(int f, const char *dummy)
     {
         file = f;
         currentOffset = 0;
@@ -87,11 +86,11 @@ private:
 #else // FILESYS
 class FileHeader;
 
-class OpenFile {
+class OpenFile
+{
 public:
-
     /// Open a file whose header is located at `sector` on the disk.
-    OpenFile(int sector);
+    OpenFile(int sector, const char *name);
 
     /// Close the file.
     ~OpenFile();
@@ -114,12 +113,17 @@ public:
     // the UNIX idiom -- `lseek` to end of file, `tell`, `lseek` back).
     unsigned Length() const;
 
-  private:
-    FileHeader *hdr;  ///< Header for this file.
-    unsigned seekPosition;  ///< Current position within the file.
+    // Agregar un seek position a la lista de seek positions con su pid
+    void AddSeekPosition(unsigned pid);
+
+private:
+    FileHeader *hdr; ///< Header for this file.
+
+    const char *filename; ///< Name of the file.
+    // Lista de clave-valor, la clave es el pid y el valor es el seekPosition
+    LinkedList<int, unsigned> *seekPositionList;
 };
 
 #endif
-
 
 #endif

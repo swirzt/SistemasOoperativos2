@@ -41,15 +41,16 @@
 /// All rights reserved.  See `copyright.h` for copyright notice and
 /// limitation of liability and disclaimer of warranty provisions.
 
-
 #include "file_system.hh"
 #include "directory.hh"
 #include "file_header.hh"
 #include "lib/bitmap.hh"
+#include "threads/system.hh"
+#include "threads/lock.hh"
+#include "threads/condition.hh"
 
 #include <stdio.h>
 #include <string.h>
-
 
 /// Sectors containing the file headers for the bitmap of free sectors, and
 /// the directory of files.  These file headers are placed in well-known
@@ -69,11 +70,12 @@ static const unsigned DIRECTORY_SECTOR = 1;
 FileSystem::FileSystem(bool format)
 {
     DEBUG('f', "Initializing the file system.\n");
-    if (format) {
-        Bitmap     *freeMap = new Bitmap(NUM_SECTORS);
-        Directory  *dir     = new Directory(NUM_DIR_ENTRIES);
-        FileHeader *mapH    = new FileHeader;
-        FileHeader *dirH    = new FileHeader;
+    if (format)
+    {
+        Bitmap *freeMap = new Bitmap(NUM_SECTORS);
+        Directory *dir = new Directory(NUM_DIR_ENTRIES);
+        FileHeader *mapH = new FileHeader;
+        FileHeader *dirH = new FileHeader;
 
         DEBUG('f', "Formatting the file system.\n");
 
@@ -100,10 +102,36 @@ FileSystem::FileSystem(bool format)
         // OK to open the bitmap and directory files now.
         // The file system operations assume these two files are left open
         // while Nachos is running.
+        {
+            DEBUG('f', "Creando FreeMap\n");
+            freeMapFile = new OpenFile(FREE_MAP_SECTOR, "FreeMap");
 
-        freeMapFile   = new OpenFile(FREE_MAP_SECTOR);
-        directoryFile = new OpenFile(DIRECTORY_SECTOR);
+            OpenFilesData dataMap = new struct _OpenFileData;
+            dataMap->file = freeMapFile;
+            dataMap->numReaders = 0;
+            dataMap->numWriters = 0;
+            dataMap->writerActive = false;
+            dataMap->lock = new Lock("FreeMap");
+            dataMap->condition = new Condition("FreeMap", dataMap->lock);
 
+            openFilesData->insert("FreeMap", dataMap);
+            DEBUG('f', "Cree FreeMap\n");
+        }
+        {
+            DEBUG('f', "Creando Directory\n");
+            directoryFile = new OpenFile(DIRECTORY_SECTOR, "Directory");
+
+            OpenFilesData dataDirectory = new struct _OpenFileData;
+            dataDirectory->file = freeMapFile;
+            dataDirectory->numReaders = 0;
+            dataDirectory->numWriters = 0;
+            dataDirectory->writerActive = false;
+            dataDirectory->lock = new Lock("Directory");
+            dataDirectory->condition = new Condition("Directory", dataDirectory->lock);
+
+            openFilesData->insert("Directory", dataDirectory);
+            DEBUG('f', "%d\n", openFilesData->get("Directory", &dataDirectory));
+        }
         // Once we have the files “open”, we can write the initial version of
         // each file back to disk.  The directory at this point is completely
         // empty; but the bitmap has been changed to reflect the fact that
@@ -111,10 +139,11 @@ FileSystem::FileSystem(bool format)
         // to hold the file data for the directory and bitmap.
 
         DEBUG('f', "Writing bitmap and directory back to disk.\n");
-        freeMap->WriteBack(freeMapFile);     // flush changes to disk
+        freeMap->WriteBack(freeMapFile); // flush changes to disk
         dir->WriteBack(directoryFile);
 
-        if (debug.IsEnabled('f')) {
+        if (debug.IsEnabled('f'))
+        {
             freeMap->Print();
             dir->Print();
 
@@ -123,12 +152,38 @@ FileSystem::FileSystem(bool format)
             delete mapH;
             delete dirH;
         }
-    } else {
+    }
+    else
+    {
         // If we are not formatting the disk, just open the files
         // representing the bitmap and directory; these are left open while
         // Nachos is running.
-        freeMapFile   = new OpenFile(FREE_MAP_SECTOR);
-        directoryFile = new OpenFile(DIRECTORY_SECTOR);
+        {
+            freeMapFile = new OpenFile(FREE_MAP_SECTOR, "FreeMap");
+
+            OpenFilesData dataMap = new struct _OpenFileData;
+            dataMap->file = freeMapFile;
+            dataMap->numReaders = 0;
+            dataMap->numWriters = 0;
+            dataMap->writerActive = false;
+            dataMap->lock = new Lock("FreeMap");
+            dataMap->condition = new Condition("FreeMap", dataMap->lock);
+
+            openFilesData->insert("FreeMap", dataMap);
+        }
+        {
+            directoryFile = new OpenFile(DIRECTORY_SECTOR, "Directory");
+
+            OpenFilesData dataDirectory = new struct _OpenFileData;
+            dataDirectory->file = freeMapFile;
+            dataDirectory->numReaders = 0;
+            dataDirectory->numWriters = 0;
+            dataDirectory->writerActive = false;
+            dataDirectory->lock = new Lock("Directory");
+            dataDirectory->condition = new Condition("Directory", dataDirectory->lock);
+
+            openFilesData->insert("Directory", dataDirectory);
+        }
     }
 }
 
@@ -163,8 +218,7 @@ FileSystem::~FileSystem()
 ///
 /// * `name` is the name of file to be created.
 /// * `initialSize` is the size of file to be created.
-bool
-FileSystem::Create(const char *name, unsigned initialSize)
+bool FileSystem::Create(const char *name, unsigned initialSize)
 {
     ASSERT(name != nullptr);
     ASSERT(initialSize < MAX_FILE_SIZE);
@@ -176,22 +230,31 @@ FileSystem::Create(const char *name, unsigned initialSize)
 
     bool success;
 
-    if (dir->Find(name) != -1) {
-        success = false;  // File is already in directory.
-    } else {
+    if (dir->Find(name) != -1)
+    {
+        success = false; // File is already in directory.
+    }
+    else
+    {
         Bitmap *freeMap = new Bitmap(NUM_SECTORS);
         freeMap->FetchFrom(freeMapFile);
         int sector = freeMap->Find();
-          // Find a sector to hold the file header.
-        if (sector == -1) {
-            success = false;  // No free block for file header.
-        } else if (!dir->Add(name, sector)) {
-            success = false;  // No space in directory.
-        } else {
+        // Find a sector to hold the file header.
+        if (sector == -1)
+        {
+            success = false; // No free block for file header.
+        }
+        else if (!dir->Add(name, sector))
+        {
+            success = false; // No space in directory.
+        }
+        else
+        {
             FileHeader *h = new FileHeader;
             success = h->Allocate(freeMap, initialSize);
-              // Fails if no space on disk for data.
-            if (success) {
+            // Fails if no space on disk for data.
+            if (success)
+            {
                 // Everything worked, flush all changes back to disk.
                 h->WriteBack(sector);
                 dir->WriteBack(directoryFile);
@@ -216,18 +279,38 @@ OpenFile *
 FileSystem::Open(const char *name)
 {
     ASSERT(name != nullptr);
+    OpenFilesData data;
+
+    if (openFilesData->get(name, &data))
+    {
+        return data->file;
+    }
 
     Directory *dir = new Directory(NUM_DIR_ENTRIES);
-    OpenFile  *openFile = nullptr;
+    OpenFile *openFile = nullptr;
 
     DEBUG('f', "Opening file %s\n", name);
     dir->FetchFrom(directoryFile);
     int sector = dir->Find(name);
-    if (sector >= 0) {
-        openFile = new OpenFile(sector);  // `name` was found in directory.
+    if (sector >= 0)
+    {
+        openFile = new OpenFile(sector, name); // `name` was found in directory.
     }
     delete dir;
-    return openFile;  // Return null if not found.
+    if (openFile != nullptr)
+    {
+        data = new struct _OpenFileData;
+        data->file = openFile;
+        data->numReaders = 0;
+        data->numWriters = 0;
+        data->writerActive = false;
+        data->lock = new Lock(name);
+        data->condition = new Condition(name, data->lock);
+
+        openFilesData->insert(name, data);
+    }
+
+    return openFile; // Return null if not found.
 }
 
 /// Delete a file from the file system.
@@ -242,17 +325,17 @@ FileSystem::Open(const char *name)
 /// file system.
 ///
 /// * `name` is the text name of the file to be removed.
-bool
-FileSystem::Remove(const char *name)
+bool FileSystem::Remove(const char *name)
 {
     ASSERT(name != nullptr);
 
     Directory *dir = new Directory(NUM_DIR_ENTRIES);
     dir->FetchFrom(directoryFile);
     int sector = dir->Find(name);
-    if (sector == -1) {
-       delete dir;
-       return false;  // file not found
+    if (sector == -1)
+    {
+        delete dir;
+        return false; // file not found
     }
     FileHeader *fileH = new FileHeader;
     fileH->FetchFrom(sector);
@@ -260,12 +343,12 @@ FileSystem::Remove(const char *name)
     Bitmap *freeMap = new Bitmap(NUM_SECTORS);
     freeMap->FetchFrom(freeMapFile);
 
-    fileH->Deallocate(freeMap);  // Remove data blocks.
-    freeMap->Clear(sector);      // Remove header block.
+    fileH->Deallocate(freeMap); // Remove data blocks.
+    freeMap->Clear(sector);     // Remove header block.
     dir->Remove(name);
 
-    freeMap->WriteBack(freeMapFile);  // Flush to disk.
-    dir->WriteBack(directoryFile);    // Flush to disk.
+    freeMap->WriteBack(freeMapFile); // Flush to disk.
+    dir->WriteBack(directoryFile);   // Flush to disk.
     delete fileH;
     delete dir;
     delete freeMap;
@@ -273,8 +356,7 @@ FileSystem::Remove(const char *name)
 }
 
 /// List all the files in the file system directory.
-void
-FileSystem::List()
+void FileSystem::List()
 {
     Directory *dir = new Directory(NUM_DIR_ENTRIES);
 
@@ -288,7 +370,8 @@ AddToShadowBitmap(unsigned sector, Bitmap *map)
 {
     ASSERT(map != nullptr);
 
-    if (map->Test(sector)) {
+    if (map->Test(sector))
+    {
         DEBUG('f', "Sector %u was already marked.\n", sector);
         return false;
     }
@@ -300,7 +383,8 @@ AddToShadowBitmap(unsigned sector, Bitmap *map)
 static bool
 CheckForError(bool value, const char *message)
 {
-    if (!value) {
+    if (!value)
+    {
         DEBUG('f', "Error: %s\n", message);
     }
     return !value;
@@ -310,7 +394,8 @@ static bool
 CheckSector(unsigned sector, Bitmap *shadowMap)
 {
     if (CheckForError(sector < NUM_SECTORS,
-                      "sector number too big.  Skipping bitmap check.")) {
+                      "sector number too big.  Skipping bitmap check."))
+    {
         return true;
     }
     return CheckForError(AddToShadowBitmap(sector, shadowMap),
@@ -331,7 +416,8 @@ CheckFileHeader(const RawFileHeader *rh, unsigned num, Bitmap *shadowMap)
                            "sector count not compatible with file size.");
     error |= CheckForError(rh->numSectors < NUM_DIRECT,
                            "too many blocks.");
-    for (unsigned i = 0; i < rh->numSectors; i++) {
+    for (unsigned i = 0; i < rh->numSectors; i++)
+    {
         unsigned s = rh->dataSectors[i];
         error |= CheckSector(s, shadowMap);
     }
@@ -342,7 +428,8 @@ static bool
 CheckBitmaps(const Bitmap *freeMap, const Bitmap *shadowMap)
 {
     bool error = false;
-    for (unsigned i = 0; i < NUM_SECTORS; i++) {
+    for (unsigned i = 0; i < NUM_SECTORS; i++)
+    {
         DEBUG('f', "Checking sector %u. Original: %u, shadow: %u.\n",
               i, freeMap->Test(i), shadowMap->Test(i));
         error |= CheckForError(freeMap->Test(i) == shadowMap->Test(i),
@@ -361,12 +448,15 @@ CheckDirectory(const RawDirectory *rd, Bitmap *shadowMap)
     unsigned nameCount = 0;
     const char *knownNames[NUM_DIR_ENTRIES];
 
-    for (unsigned i = 0; i < NUM_DIR_ENTRIES; i++) {
+    for (unsigned i = 0; i < NUM_DIR_ENTRIES; i++)
+    {
         DEBUG('f', "Checking direntry: %u.\n", i);
         const DirectoryEntry *e = &rd->table[i];
 
-        if (e->inUse) {
-            if (strlen(e->name) > FILE_NAME_MAX_LEN) {
+        if (e->inUse)
+        {
+            if (strlen(e->name) > FILE_NAME_MAX_LEN)
+            {
                 DEBUG('f', "Filename too long.\n");
                 error = true;
             }
@@ -375,16 +465,19 @@ CheckDirectory(const RawDirectory *rd, Bitmap *shadowMap)
             DEBUG('f', "Checking for repeated names.  Name count: %u.\n",
                   nameCount);
             bool repeated = false;
-            for (unsigned j = 0; j < nameCount; j++) {
+            for (unsigned j = 0; j < nameCount; j++)
+            {
                 DEBUG('f', "Comparing \"%s\" and \"%s\".\n",
                       knownNames[j], e->name);
-                if (strcmp(knownNames[j], e->name) == 0) {
+                if (strcmp(knownNames[j], e->name) == 0)
+                {
                     DEBUG('f', "Repeated filename.\n");
                     repeated = true;
                     error = true;
                 }
             }
-            if (!repeated) {
+            if (!repeated)
+            {
                 knownNames[nameCount] = e->name;
                 DEBUG('f', "Added \"%s\" at %u.\n", e->name, nameCount);
                 nameCount++;
@@ -404,8 +497,7 @@ CheckDirectory(const RawDirectory *rd, Bitmap *shadowMap)
     return error;
 }
 
-bool
-FileSystem::Check()
+bool FileSystem::Check()
 {
     DEBUG('f', "Performing filesystem check\n");
     bool error = false;
@@ -464,13 +556,12 @@ FileSystem::Check()
 /// * for each file in the directory:
 ///   * the contents of the file header;
 ///   * the data in the file.
-void
-FileSystem::Print()
+void FileSystem::Print()
 {
-    FileHeader *bitH    = new FileHeader;
-    FileHeader *dirH    = new FileHeader;
-    Bitmap     *freeMap = new Bitmap(NUM_SECTORS);
-    Directory  *dir     = new Directory(NUM_DIR_ENTRIES);
+    FileHeader *bitH = new FileHeader;
+    FileHeader *dirH = new FileHeader;
+    Bitmap *freeMap = new Bitmap(NUM_SECTORS);
+    Directory *dir = new Directory(NUM_DIR_ENTRIES);
 
     printf("--------------------------------\n");
     bitH->FetchFrom(FREE_MAP_SECTOR);

@@ -22,6 +22,10 @@
 #include "lib/table.hh"
 #endif
 
+#ifdef FILESYS // *FILESYS* or *FILESYS_STUB*.
+#include "lib/utility.hh"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -47,7 +51,7 @@ FileSystem *fileSystem;
 
 #ifdef FILESYS
 SynchDisk *synchDisk;
-OpenFilesData *openFilesData;
+OpenFilesList *openFilesData;
 #endif
 
 #ifdef USER_PROGRAM // Requires either *FILESYS* or *FILESYS_STUB*.
@@ -285,19 +289,7 @@ void Initialize(int argc, char **argv)
 
 #ifdef FILESYS
     synchDisk = new SynchDisk("DISK");
-    openFilesData = new OpenFilesData[NUM_SECTORS];
-    // Inicializamos un OpenFileData para cada sector del disco.
-    // Esto nos permite llevar cuenta de a lo sumo NUM_SECTORS archivos abiertos.
-    // Vamos a hacer un lock por cada sector del disco.
-    for (unsigned int i = 0; i < NUM_SECTORS; i++)
-    {
-        openFilesData[i] = new struct _OpenFileData;
-        openFilesData[i]->numReaders = 0;
-        openFilesData[i]->numWriters = 0;
-        openFilesData[i]->writerActive = false;
-        openFilesData[i]->lock = new Lock("lock sector " + i);
-        openFilesData[i]->condition = new Condition("condition sector " + i, openFilesData[i]->lock);
-    }
+    openFilesData = new OpenFilesList(strcomp);
 #endif
 
 #ifdef FILESYS_NEEDED
