@@ -62,18 +62,8 @@ extern SynchDisk *synchDisk;
 #include "threads/lock.hh"
 #include "threads/condition.hh"
 #include "lib/list.hh"
-typedef struct _OpenFileData
-{
-    OpenFile *file;
-    unsigned int numReaders;
-    unsigned int numWriters;
-    bool writerActive;
-    Lock *lock;
-    Condition *condition;
-    bool deleted;
-    Lock *deleteLock;
-} * OpenFilesData;
-typedef LinkedList<const char *, OpenFilesData> OpenFilesList;
+#include "filesys/open_file_data.hh"
+typedef LinkedList<const char *, OpenFileData *> OpenFilesList;
 extern OpenFilesList *openFilesData;
 
 #endif

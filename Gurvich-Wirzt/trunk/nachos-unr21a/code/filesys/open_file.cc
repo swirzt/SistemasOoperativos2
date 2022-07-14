@@ -16,6 +16,7 @@
 #include "lib/linkedlist.hh"
 #include "threads/system.hh"
 #include "lib/utility.hh"
+#include "filesys/open_file_data.hh"
 #include <string.h>
 
 /// Open a Nachos file for reading and writing.  Bring the file header into
@@ -137,7 +138,7 @@ int OpenFile::ReadAt(char *into, unsigned numBytes, unsigned position)
     lastSector = DivRoundDown(position + numBytes - 1, SECTOR_SIZE);
     numSectors = 1 + lastSector - firstSector;
 
-    OpenFilesData sdata;
+    OpenFileData *sdata;
     ASSERT(openFilesData->get(this->filename, &sdata));
 
     // Algoritmo para empezar a leer ----
@@ -215,7 +216,7 @@ int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
     // Copy in the bytes we want to change.
     memcpy(&buf[position - firstSector * SECTOR_SIZE], from, numBytes);
 
-    OpenFilesData sdata;
+    OpenFileData *sdata;
     ASSERT(openFilesData->get(this->filename, &sdata));
 
     // Algoritmo para empezar a escribir ----
@@ -256,4 +257,9 @@ OpenFile::Length() const
 void OpenFile::AddSeekPosition(unsigned position)
 {
     seekPositionList->insert(currentThread->pid, position);
+}
+
+const char *OpenFile::GetName() const
+{
+    return filename;
 }

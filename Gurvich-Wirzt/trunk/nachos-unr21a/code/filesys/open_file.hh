@@ -116,6 +116,8 @@ public:
     // Agregar un seek position a la lista de seek positions con su pid
     void AddSeekPosition(unsigned pid);
 
+    const char *GetName() const;
+
 private:
     FileHeader *hdr; ///< Header for this file.
 

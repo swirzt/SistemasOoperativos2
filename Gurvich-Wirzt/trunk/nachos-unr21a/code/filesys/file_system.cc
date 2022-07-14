@@ -48,6 +48,7 @@
 #include "threads/system.hh"
 #include "threads/lock.hh"
 #include "threads/condition.hh"
+#include "open_file_data.hh"
 
 #include <stdio.h>
 #include <string.h>
@@ -106,31 +107,15 @@ FileSystem::FileSystem(bool format)
             DEBUG('f', "Creando FreeMap\n");
             freeMapFile = new OpenFile(FREE_MAP_SECTOR, "FreeMap");
 
-            OpenFilesData dataMap = new struct _OpenFileData;
-            dataMap->file = freeMapFile;
-            dataMap->numReaders = 0;
-            dataMap->numWriters = 0;
-            dataMap->writerActive = false;
-            dataMap->lock = new Lock("FreeMap");
-            dataMap->condition = new Condition("FreeMap", dataMap->lock);
-
-            openFilesData->insert("FreeMap", dataMap);
+            openFilesData->insert("FreeMap", new OpenFileData(freeMapFile));
             DEBUG('f', "Cree FreeMap\n");
         }
         {
             DEBUG('f', "Creando Directory\n");
             directoryFile = new OpenFile(DIRECTORY_SECTOR, "Directory");
 
-            OpenFilesData dataDirectory = new struct _OpenFileData;
-            dataDirectory->file = freeMapFile;
-            dataDirectory->numReaders = 0;
-            dataDirectory->numWriters = 0;
-            dataDirectory->writerActive = false;
-            dataDirectory->lock = new Lock("Directory");
-            dataDirectory->condition = new Condition("Directory", dataDirectory->lock);
-
-            openFilesData->insert("Directory", dataDirectory);
-            DEBUG('f', "%d\n", openFilesData->get("Directory", &dataDirectory));
+            openFilesData->insert("Directory", new OpenFileData(directoryFile));
+            DEBUG('f', "Cree Directory\n");
         }
         // Once we have the files “open”, we can write the initial version of
         // each file back to disk.  The directory at this point is completely
@@ -159,30 +144,18 @@ FileSystem::FileSystem(bool format)
         // representing the bitmap and directory; these are left open while
         // Nachos is running.
         {
+            DEBUG('f', "Creando FreeMap\n");
             freeMapFile = new OpenFile(FREE_MAP_SECTOR, "FreeMap");
 
-            OpenFilesData dataMap = new struct _OpenFileData;
-            dataMap->file = freeMapFile;
-            dataMap->numReaders = 0;
-            dataMap->numWriters = 0;
-            dataMap->writerActive = false;
-            dataMap->lock = new Lock("FreeMap");
-            dataMap->condition = new Condition("FreeMap", dataMap->lock);
-
-            openFilesData->insert("FreeMap", dataMap);
+            openFilesData->insert("FreeMap", new OpenFileData(freeMapFile));
+            DEBUG('f', "Cree FreeMap\n");
         }
         {
+            DEBUG('f', "Creando Directory\n");
             directoryFile = new OpenFile(DIRECTORY_SECTOR, "Directory");
 
-            OpenFilesData dataDirectory = new struct _OpenFileData;
-            dataDirectory->file = freeMapFile;
-            dataDirectory->numReaders = 0;
-            dataDirectory->numWriters = 0;
-            dataDirectory->writerActive = false;
-            dataDirectory->lock = new Lock("Directory");
-            dataDirectory->condition = new Condition("Directory", dataDirectory->lock);
-
-            openFilesData->insert("Directory", dataDirectory);
+            openFilesData->insert("Directory", new OpenFileData(directoryFile));
+            DEBUG('f', "Cree Directory\n");
         }
     }
 }
@@ -279,7 +252,7 @@ OpenFile *
 FileSystem::Open(const char *name)
 {
     ASSERT(name != nullptr);
-    OpenFilesData data;
+    OpenFileData *data;
 
     if (openFilesData->get(name, &data))
     {
@@ -299,13 +272,7 @@ FileSystem::Open(const char *name)
     delete dir;
     if (openFile != nullptr)
     {
-        data = new struct _OpenFileData;
-        data->file = openFile;
-        data->numReaders = 0;
-        data->numWriters = 0;
-        data->writerActive = false;
-        data->lock = new Lock(name);
-        data->condition = new Condition(name, data->lock);
+        data = new OpenFileData(openFile);
 
         openFilesData->insert(name, data);
     }
