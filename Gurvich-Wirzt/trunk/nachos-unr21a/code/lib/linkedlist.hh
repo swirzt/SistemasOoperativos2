@@ -1,6 +1,9 @@
 #ifndef LINKED_LIST
 #define LINKED_LIST
 
+// import io
+#include <iostream>
+
 // make a template for 2 types of data
 template <class Key, class Value>
 class Node
@@ -31,6 +34,7 @@ public:
     void remove(Key key);
     bool get(Key key, Value *value);
     void update(Key key, Value value);
+    void print();
 
 private:
     bool (*f)(Key k1, Key k2);
@@ -117,6 +121,17 @@ void LinkedList<Key, Value>::update(Key key, Value value)
             current->value = value;
             return;
         }
+        current = current->next;
+    }
+}
+
+template <class Key, class Value>
+void LinkedList<Key, Value>::print()
+{
+    Node<Key, Value> *current = head;
+    while (current != nullptr)
+    {
+        std::cout << current->key << " " << current->value << std::endl;
         current = current->next;
     }
 }

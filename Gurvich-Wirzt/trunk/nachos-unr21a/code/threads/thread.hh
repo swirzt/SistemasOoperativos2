@@ -163,7 +163,7 @@ private:
 
 #ifdef USER_PROGRAM
 
-    //File table
+    // File table
     Table<OpenFile *> *openFiles;
 
     /// User-level CPU register state.
@@ -178,7 +178,7 @@ public:
     int createFile(OpenFile *file);
 
     // Removes a file descriptor from open files
-    bool removeFile(int fileNumber);
+    OpenFile *removeFile(int fileNumber);
 
     // Get a file from open files
     OpenFile *getFile(int fileNumber);

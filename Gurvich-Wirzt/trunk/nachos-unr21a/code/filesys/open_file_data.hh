@@ -1,3 +1,4 @@
+#ifndef FILESYS_STUB
 #ifndef NACHOS_FILESYS_OPENFILEDATA__HH
 #define NACHOS_FILESYS_OPENFILEDATA__HH
 
@@ -12,13 +13,15 @@ public:
     ~OpenFileData();
 
     OpenFile *file;
+    unsigned int numOpens;
     unsigned int numReaders;
     unsigned int numWriters;
     bool writerActive;
     Lock *lock;
     Condition *condition;
     bool deleted;
-    Lock *deleteLock;
+    Lock *dataLock;
 };
 
+#endif
 #endif

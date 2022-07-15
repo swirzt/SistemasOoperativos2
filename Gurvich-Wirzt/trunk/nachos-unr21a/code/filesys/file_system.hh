@@ -134,6 +134,9 @@ private:
                              ///< file.
     OpenFile *directoryFile; ///< “Root” directory -- list of file names,
                              ///< represented as a file.
+
+    /// Remove a file from the filesystem.
+    bool CleanFile(const char *name);
 };
 
 #endif

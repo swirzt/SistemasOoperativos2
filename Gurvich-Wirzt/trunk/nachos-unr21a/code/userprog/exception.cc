@@ -23,6 +23,7 @@
 #include "transfer.hh"
 #include "syscall.h"
 #include "filesys/directory_entry.hh"
+#include "filesys/open_file_data.hh"
 #include "threads/system.hh"
 #include "args.hh"
 
@@ -110,7 +111,7 @@ SyscallHandler(ExceptionType _et)
 
     case SC_CREATE:
     {
-        DEBUG('e', "Starting to create file \n");
+        DEBUG('f', "Starting to create file \n");
         int filenameAddr = machine->ReadRegister(4);
         if (filenameAddr == 0)
         {
@@ -128,8 +129,7 @@ SyscallHandler(ExceptionType _et)
             machine->WriteRegister(2, -1);
             break;
         }
-        DEBUG('e', "`Create` requested for file `%s`.\n", filename);
-        if (fileSystem->Create(filename, 0))
+        if (fileSystem->Create(filename, 1024))
         {
             DEBUG('e', "Succesfully created a new file with name %s \n", filename);
             machine->WriteRegister(2, 0);
@@ -163,7 +163,6 @@ SyscallHandler(ExceptionType _et)
             break;
         }
 
-        DEBUG('e', "Remove requested for file `%s`.\n", filename);
         if (fileSystem->Remove(filename))
         {
             DEBUG('e', "Succesfully removed file with name %s \n", filename);
@@ -205,11 +204,9 @@ SyscallHandler(ExceptionType _et)
         {
         case CONSOLE_INPUT:
         {
-            DEBUG('e', "Requested to read from console\n");
             synchconsole->ReadBuffer(bufferSys, size);
             char algo = bufferSys[size]; // Esto hace que el debug imprima lindo
             bufferSys[size] = '\0';
-            DEBUG('e', "Read from console: %s \n", bufferSys);
             bufferSys[size] = algo; // Dejo el buffer como estaba
             bytesRead = size;
             if (bytesRead != 0)
@@ -236,7 +233,6 @@ SyscallHandler(ExceptionType _et)
                 bytesRead = file->Read(bufferSys, size);
                 if (bytesRead != 0)
                     WriteBufferToUser(bufferSys, bufferUsr, bytesRead);
-                DEBUG('e', "Read from file: %s \n", bufferSys);
             }
             break;
         }
@@ -279,10 +275,7 @@ SyscallHandler(ExceptionType _et)
             break;
 
         case CONSOLE_OUTPUT:
-
-            DEBUG('e', "Requested to write to console output \n");
             synchconsole->WriteBuffer(bufferSys, size);
-            DEBUG('e', "Wrote to console output \n");
             bytesWritten = size;
             break;
 
@@ -370,14 +363,41 @@ SyscallHandler(ExceptionType _et)
     {
         int fid = machine->ReadRegister(4);
         DEBUG('e', "`Close` requested for id %u.\n", fid);
-        if (!currentThread->removeFile(fid))
+        OpenFile *archivo = currentThread->removeFile(fid);
+
+        if (archivo == nullptr)
         {
             DEBUG('e', "Can't close file %u", fid);
+
             machine->WriteRegister(2, -1);
         }
         else
         {
             DEBUG('e', "Closed file %u", fid);
+#ifndef FILESYS_STUB
+            const char *name = archivo->GetName();
+
+            OpenFileData *data;
+            openFilesData->get(name, &data);
+
+            data->dataLock->Acquire();
+            data->numOpens--;
+            if (data->numOpens > 0)
+            {
+                DEBUG('f', "Quedan %d lectores en %s\n", data->numOpens, name);
+                data->dataLock->Release();
+            }
+            else
+            {
+                DEBUG('f', "Soy el ultimo que lee en %s\n", name);
+                data->dataLock->Release();
+                openFilesData->remove(name);
+                delete data;
+            }
+#else
+            delete archivo;
+#endif
+
             machine->WriteRegister(2, 0);
         }
 
@@ -451,8 +471,10 @@ SyscallHandler(ExceptionType _et)
             hilo->space = memoria;
             hilo->Fork(initialize, args);
             DEBUG('e', "Initialized new exec thread \n");
+#ifdef FILESYS_STUB
 #ifndef DEMAND_LOADING
             delete archivo;
+#endif
 #endif
             machine->WriteRegister(2, hilo->pid);
         }

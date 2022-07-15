@@ -339,7 +339,7 @@ int Thread::createFile(OpenFile *file)
 }
 
 // Remove an entry in the file table
-bool Thread::removeFile(int fileNumber)
+OpenFile *Thread::removeFile(int fileNumber)
 {
     return openFiles->Remove(fileNumber);
 }

@@ -256,7 +256,19 @@ FileSystem::Open(const char *name)
 
     if (openFilesData->get(name, &data))
     {
-        return data->file;
+        if (data->deleted)
+        {
+            DEBUG('f', "Quise abrir el archivo %s pero esta marcado para borrarse\n", name);
+            return nullptr;
+        }
+        else
+        {
+            DEBUG('f', "Abriendo el archivo %s ya abierto por otro hilo\n", name);
+            data->dataLock->Acquire();
+            data->numOpens++;
+            data->dataLock->Release();
+            return data->file;
+        }
     }
 
     Directory *dir = new Directory(NUM_DIR_ENTRIES);
@@ -274,28 +286,14 @@ FileSystem::Open(const char *name)
     {
         data = new OpenFileData(openFile);
 
-        openFilesData->insert(name, data);
+        openFilesData->insert(openFile->GetName(), data);
     }
 
     return openFile; // Return null if not found.
 }
 
-/// Delete a file from the file system.
-///
-/// This requires:
-/// 1. Remove it from the directory.
-/// 2. Delete the space for its header.
-/// 3. Delete the space for its data blocks.
-/// 4. Write changes to directory, bitmap back to disk.
-///
-/// Return true if the file was deleted, false if the file was not in the
-/// file system.
-///
-/// * `name` is the text name of the file to be removed.
-bool FileSystem::Remove(const char *name)
+bool FileSystem::CleanFile(const char *name)
 {
-    ASSERT(name != nullptr);
-
     Directory *dir = new Directory(NUM_DIR_ENTRIES);
     dir->FetchFrom(directoryFile);
     int sector = dir->Find(name);
@@ -320,6 +318,34 @@ bool FileSystem::Remove(const char *name)
     delete dir;
     delete freeMap;
     return true;
+}
+
+/// Delete a file from the file system.
+///
+/// This requires:
+/// 1. Remove it from the directory.
+/// 2. Delete the space for its header.
+/// 3. Delete the space for its data blocks.
+/// 4. Write changes to directory, bitmap back to disk.
+///
+/// Return true if the file was deleted, false if the file was not in the
+/// file system.
+///
+/// * `name` is the text name of the file to be removed.
+bool FileSystem::Remove(const char *name)
+{
+    ASSERT(name != nullptr);
+    OpenFileData *data;
+
+    if (openFilesData->get(name, &data))
+    {
+        data->dataLock->Acquire();
+        data->deleted = true;
+        data->dataLock->Release();
+        return true;
+    }
+    else
+        return CleanFile(name);
 }
 
 /// List all the files in the file system directory.
