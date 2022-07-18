@@ -12,10 +12,8 @@
 #ifndef NACHOS_FILESYS_FILEHEADER__HH
 #define NACHOS_FILESYS_FILEHEADER__HH
 
-
 #include "raw_file_header.hh"
 #include "lib/bitmap.hh"
-
 
 /// The following class defines the Nachos "file header" (in UNIX terms, the
 /// “i-node”), describing where on disk to find all of the data in the file.
@@ -31,9 +29,11 @@
 /// There is no constructor; rather the file header can be initialized
 /// by allocating blocks for the file (if it is a new file), or by
 /// reading it from disk.
-class FileHeader {
+class FileHeader
+{
 public:
-
+    FileHeader();
+    ~FileHeader();
     /// Initialize a file header, including allocating space on disk for the
     /// file data.
     bool Allocate(Bitmap *bitMap, unsigned fileSize);
@@ -63,9 +63,12 @@ public:
     /// system at a low level.
     const RawFileHeader *GetRaw() const;
 
+    FileHeader *indirect;
+    void IndirectAllocate(Bitmap *bitMap, unsigned filesize, unsigned rest);
+    void SetNextInode(unsigned sector);
+
 private:
     RawFileHeader raw;
 };
-
 
 #endif
