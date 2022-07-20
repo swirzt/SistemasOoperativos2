@@ -120,6 +120,7 @@ public:
 
 private:
     FileHeader *hdr; ///< Header for this file.
+    int hdrSector;   ///< Sector containing this file's header.
 
     const char *filename; ///< Name of the file.
     // Lista de clave-valor, la clave es el pid y el valor es el seekPosition

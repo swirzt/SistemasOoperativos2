@@ -120,6 +120,9 @@ public:
     /// Delete a file (UNIX `unlink`).
     bool Remove(const char *name);
 
+    /// Extend a file size (UNIX `truncate`).
+    bool Extend(FileHeader *hdr, unsigned size);
+
     /// List all the files in the file system.
     void List();
 

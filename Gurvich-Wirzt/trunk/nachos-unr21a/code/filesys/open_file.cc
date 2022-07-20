@@ -31,6 +31,7 @@ OpenFile::OpenFile(int sector, const char *name)
     seekPositionList->insert(currentThread->pid, 0);
     char *temp = new char[strlen(name) + 1];
     strcpy(temp, name);
+    hdrSector = sector;
     filename = temp;
 }
 
@@ -182,14 +183,18 @@ int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
     bool firstAligned, lastAligned;
     char *buf;
 
-    if (position >= fileLength)
-    {
-        return 0; // Check request.
-    }
+    // Necesitamos agregar mas data sectors (y headers si tenemos que agrandarlo)
     if (position + numBytes > fileLength)
     {
-        numBytes = fileLength - position;
+        DEBUG('f', "Me pase de largo, voy a agrandar el archivo %s, su tamaño actual es %u\n", filename, fileLength);
+        unsigned left = position + numBytes - fileLength;
+        if (!fileSystem->Extend(hdr, left))
+        {
+            return 0; // Could not write
+        }
+        hdr->WriteBack(hdrSector);
     }
+
     DEBUG('f', "Writing %u bytes at %u, from file of length %u.\n",
           numBytes, position, fileLength);
 

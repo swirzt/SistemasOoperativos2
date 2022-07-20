@@ -75,8 +75,8 @@ FileSystem::FileSystem(bool format)
     {
         Bitmap *freeMap = new Bitmap(NUM_SECTORS);
         Directory *dir = new Directory(NUM_DIR_ENTRIES);
-        FileHeader *mapH = new FileHeader;
-        FileHeader *dirH = new FileHeader;
+        FileHeader *mapH = new FileHeader();
+        FileHeader *dirH = new FileHeader();
 
         DEBUG('f', "Formatting the file system.\n");
 
@@ -194,7 +194,6 @@ FileSystem::~FileSystem()
 bool FileSystem::Create(const char *name, unsigned initialSize)
 {
     ASSERT(name != nullptr);
-    ASSERT(initialSize < MAX_FILE_SIZE);
 
     DEBUG('f', "Creating file %s, size %u\n", name, initialSize);
 
@@ -223,17 +222,12 @@ bool FileSystem::Create(const char *name, unsigned initialSize)
         }
         else
         {
-            FileHeader *h = new FileHeader;
-            success = h->Allocate(freeMap, initialSize);
-            // Fails if no space on disk for data.
-            if (success)
-            {
-                // Everything worked, flush all changes back to disk.
-                h->WriteBack(sector);
-                dir->WriteBack(directoryFile);
-                freeMap->WriteBack(freeMapFile);
-            }
+            FileHeader *h = new FileHeader();
+            h->WriteBack(sector);
+            dir->WriteBack(directoryFile);
+            freeMap->WriteBack(freeMapFile);
             delete h;
+            success = true;
         }
         delete freeMap;
     }
@@ -346,6 +340,18 @@ bool FileSystem::Remove(const char *name)
     }
     else
         return CleanFile(name);
+}
+
+bool FileSystem::Extend(FileHeader *hdr, unsigned size)
+{
+    DEBUG('f', "Extending file by %u bytes\n", size);
+    Bitmap *freeMap = new Bitmap(NUM_SECTORS);
+    printf("%p\n", freeMapFile);
+    freeMap->FetchFrom(freeMapFile);
+    bool res = hdr->ExtendFile(freeMap, size);
+    freeMap->WriteBack(freeMapFile);
+    delete freeMap;
+    return res;
 }
 
 /// List all the files in the file system directory.

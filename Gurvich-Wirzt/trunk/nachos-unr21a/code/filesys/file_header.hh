@@ -67,6 +67,8 @@ public:
     void IndirectAllocate(Bitmap *bitMap, unsigned filesize, unsigned rest);
     void SetNextInode(unsigned sector);
 
+    bool ExtendFile(Bitmap *bitMap, unsigned extra);
+
 private:
     RawFileHeader raw;
 };

@@ -31,6 +31,8 @@
 FileHeader::FileHeader()
 {
     indirect = nullptr;
+    raw.numBytes = 0;
+    raw.numSectors = 0;
 }
 
 FileHeader::~FileHeader()
@@ -91,6 +93,7 @@ bool FileHeader::Allocate(Bitmap *freeMap, unsigned fileSize)
 
 void FileHeader::IndirectAllocate(Bitmap *freeMap, unsigned filesize, unsigned rest)
 {
+    DEBUG('f', "Alocando %u bytes en este fileHeader\n", rest);
     raw.numBytes = filesize;
     raw.numSectors = rest;
     unsigned toWrite = rest > NUM_DIRECT ? NUM_DIRECT : rest;
@@ -104,6 +107,76 @@ void FileHeader::IndirectAllocate(Bitmap *freeMap, unsigned filesize, unsigned r
 void FileHeader::SetNextInode(unsigned sector)
 {
     raw.nextInode = sector;
+}
+
+bool FileHeader::ExtendFile(Bitmap *freeMap, unsigned extra)
+{
+
+    // SI agregamos mas sectores hay que hacer una actualizacion heredada en cada header
+    unsigned cantSectors = DivRoundUp(extra + raw.numBytes, SECTOR_SIZE) - raw.numSectors;
+    DEBUG('f', "Necesito agregar %d sectores\n", cantSectors);
+    // Entra todo en el primer FileHeader, no hay que actualizar la cadena
+    if (raw.numSectors + cantSectors < NUM_DIRECT)
+    {
+        DEBUG('f', "Entra todo en el FileHeader\n");
+        if (freeMap->CountClear() < cantSectors)
+        {
+            DEBUG('f', "No tengo sectores para ocupar");
+            return false;
+        }
+
+        for (unsigned i = raw.numSectors; i < raw.numSectors + cantSectors; i++)
+        {
+            DEBUG('f', "Voy a ocupar un sector \n");
+            raw.dataSectors[i] = freeMap->Find();
+            DEBUG('f', "Ocupe el sector %u \n", raw.dataSectors[i]);
+        }
+
+        raw.numSectors += cantSectors;
+        raw.numBytes += extra;
+        return true;
+    }
+    else
+    {
+        if (indirect)
+        {
+            DEBUG('f', "Tengo otro FileHeader, voy a seguir por ahi\n");
+            if (indirect->ExtendFile(freeMap, extra))
+            {
+                raw.numSectors += cantSectors;
+                raw.numBytes += extra;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            unsigned numInodes = DivRoundUp(cantSectors, NUM_DIRECT);
+            DEBUG('f', "Necesito %u nuevos FileHeaders\n", numInodes);
+            if (freeMap->CountClear() < cantSectors + numInodes)
+            {
+                return false;
+            }
+
+            raw.nextInode = freeMap->Find();
+            indirect = new FileHeader();
+            FileHeader *temp = indirect;
+            for (unsigned i = 0; i < cantSectors; i += NUM_DIRECT)
+            {
+                temp->IndirectAllocate(freeMap, extra - (i * SECTOR_SIZE), cantSectors - i);
+                if (i + NUM_DIRECT < cantSectors)
+                {
+                    temp->SetNextInode(freeMap->Find());
+                    temp->indirect = new FileHeader();
+                    temp = temp->indirect;
+                }
+            }
+            return true;
+        }
+    }
 }
 
 /// De-allocate all the space allocated for data blocks for this file.
