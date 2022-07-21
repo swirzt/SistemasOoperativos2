@@ -4,11 +4,16 @@
 #include "filesys/file_system.hh"
 #include "filesys/raw_file_header.hh"
 #include "machine/mmu.hh"
+#include "threads/system.hh"
 
 #include <stdio.h>
 
 void SysInfo()
 {
+      unsigned dirsize = NUM_DIR_ENTRIES;
+#ifdef FILESYS
+      dirsize = fileSystem->getDirSize();
+#endif
       (void)COPYRIGHT; // Prevent warning about unused variable.
 
       const char *OPTIONS =
@@ -71,5 +76,5 @@ Filesystem:\n\
   Maximum number of dir-entries: %u.\n\
   Directory file size: %u bytes.\n",
              NUM_DIRECT, MAX_FILE_SIZE, FILE_NAME_MAX_LEN,
-             FREE_MAP_FILE_SIZE, NUM_DIR_ENTRIES, DIRECTORY_FILE_SIZE);
+             FREE_MAP_FILE_SIZE, dirsize, DIRECTORY_FILE_SIZE);
 }

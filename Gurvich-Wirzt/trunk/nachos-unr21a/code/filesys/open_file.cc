@@ -132,8 +132,8 @@ int OpenFile::ReadAt(char *into, unsigned numBytes, unsigned position)
     {
         numBytes = fileLength - position;
     }
-    DEBUG('f', "Reading %u bytes at %u, from file of length %u.\n",
-          numBytes, position, fileLength);
+    DEBUG('f', "Reading %u bytes at %u, from file of length %u. Filename: %s\n",
+          numBytes, position, fileLength, filename);
 
     firstSector = DivRoundDown(position, SECTOR_SIZE);
     lastSector = DivRoundDown(position + numBytes - 1, SECTOR_SIZE);
@@ -192,11 +192,12 @@ int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
         {
             return 0; // Could not write
         }
+        fileLength = hdr->FileLength();
         hdr->WriteBack(hdrSector);
     }
 
-    DEBUG('f', "Writing %u bytes at %u, from file of length %u.\n",
-          numBytes, position, fileLength);
+    DEBUG('f', "Writing %u bytes at %u, from file of length %u. Filename: %s\n",
+          numBytes, position, fileLength, filename);
 
     firstSector = DivRoundDown(position, SECTOR_SIZE);
     lastSector = DivRoundDown(position + numBytes - 1, SECTOR_SIZE);

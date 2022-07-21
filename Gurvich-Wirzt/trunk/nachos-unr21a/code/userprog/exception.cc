@@ -129,7 +129,7 @@ SyscallHandler(ExceptionType _et)
             machine->WriteRegister(2, -1);
             break;
         }
-        if (fileSystem->Create(filename, 1024))
+        if (fileSystem->Create(filename))
         {
             DEBUG('e', "Succesfully created a new file with name %s \n", filename);
             machine->WriteRegister(2, 0);

@@ -14,10 +14,8 @@
 #ifndef NACHOS_FILESYS_DIRECTORY__HH
 #define NACHOS_FILESYS_DIRECTORY__HH
 
-
 #include "raw_directory.hh"
 #include "open_file.hh"
-
 
 /// The following class defines a UNIX-like “directory”.  Each entry in the
 /// directory describes a file, and where to find it on disk.
@@ -28,11 +26,11 @@
 /// The constructor initializes a directory structure in memory; the
 /// `FetchFrom`/`WriteBack` operations shuffle the directory information
 /// from/to disk.
-class Directory {
+class Directory
+{
 public:
-
     /// Initialize an empty directory with space for `size` files.
-    Directory(unsigned size);
+    Directory(unsigned size, bool init);
 
     /// De-allocate the directory.
     ~Directory();
@@ -71,6 +69,5 @@ private:
 
     RawDirectory raw;
 };
-
 
 #endif

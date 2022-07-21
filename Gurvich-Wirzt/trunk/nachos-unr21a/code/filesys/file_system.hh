@@ -55,7 +55,7 @@ public:
 
     ~FileSystem() {}
 
-    bool Create(const char *name, unsigned initialSize)
+    bool Create(const char *name)
     {
         ASSERT(name != nullptr);
 
@@ -96,8 +96,8 @@ public:
 /// supports extensible files, the directory size sets the maximum number of
 /// files that can be loaded onto the disk.
 static const unsigned FREE_MAP_FILE_SIZE = NUM_SECTORS / BITS_IN_BYTE;
-static const unsigned NUM_DIR_ENTRIES = 10;
-static const unsigned DIRECTORY_FILE_SIZE = sizeof(DirectoryEntry) * NUM_DIR_ENTRIES;
+static const unsigned NUM_DIR_ENTRIES = 3;
+static const unsigned DIRECTORY_FILE_SIZE = sizeof(DirectoryEntry) * (NUM_DIR_ENTRIES + 1);
 
 class FileSystem
 {
@@ -112,7 +112,7 @@ public:
     ~FileSystem();
 
     /// Create a file (UNIX `creat`).
-    bool Create(const char *name, unsigned initialSize);
+    bool Create(const char *name);
 
     /// Open a file (UNIX `open`).
     OpenFile *Open(const char *name);
@@ -132,6 +132,10 @@ public:
     /// List all the files and their contents.
     void Print();
 
+    unsigned getDirSize();
+
+    void setDirSize(unsigned size);
+
 private:
     OpenFile *freeMapFile;   ///< Bit map of free disk blocks, represented as a
                              ///< file.
@@ -140,6 +144,8 @@ private:
 
     /// Remove a file from the filesystem.
     bool CleanFile(const char *name);
+
+    unsigned dirSize;
 };
 
 #endif
