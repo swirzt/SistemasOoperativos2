@@ -73,7 +73,7 @@ AddressSpace::AddressSpace(OpenFile *executable_file, unsigned pid)
 
 #ifdef SWAP
   swapName(pid, nombreswap);
-  fileSystem->Create(nombreswap, 0);
+  fileSystem->Create(nombreswap);
   swap = fileSystem->Open(nombreswap);
 
   swapped = new SwappedList(numPages);
@@ -225,7 +225,7 @@ void AddressSpace::SaveState()
 
 unsigned nextVictim = 0;
 
-//Random swap policy
+// Random swap policy
 #ifdef SWAP
 int PickVictim()
 {
@@ -287,7 +287,7 @@ int PickVictim()
       }
     }
   }
-  nextVictim = (nextVictim + 1) % NUM_PHYS_PAGES; //Pa calmar al GCC
+  nextVictim = (nextVictim + 1) % NUM_PHYS_PAGES; // Pa calmar al GCC
   return nextVictim;
 #endif
 }
@@ -304,7 +304,7 @@ void AddressSpace::RestoreState()
   machine->GetMMU()->pageTable = pageTable;
   machine->GetMMU()->pageTableSize = numPages;
 #else
-  for (unsigned i = 0; i < TLB_SIZE; i++) //Invalidamos el estdo de cada entrada de la TLB
+  for (unsigned i = 0; i < TLB_SIZE; i++) // Invalidamos el estdo de cada entrada de la TLB
   {
     machine->GetMMU()->tlb[i].valid = false;
   }
