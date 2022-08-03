@@ -7,8 +7,9 @@
 #define NACHOS_FILESYS_DIRECTORYENTRY__HH
 
 /// For simplicity, we assume file names are <= 20 characters long.
-const unsigned FILE_NAME_MAX_LEN = 20;
+const unsigned FILE_NAME_MAX_LEN = 23;
 const unsigned NUM_DIR_ENTRYS_SECTOR = 4; // SECTOR_SIZE (128) / sizeof(DirectoryEntry) (32)
+const unsigned MAX_FILE_PATH = FILE_NAME_MAX_LEN * 5;
 
 /// The following class defines a "directory entry", representing a file in
 /// the directory.  Each entry gives the name of the file, and where the
@@ -19,6 +20,7 @@ const unsigned NUM_DIR_ENTRYS_SECTOR = 4; // SECTOR_SIZE (128) / sizeof(Director
 class DirectoryEntry
 {
 public:
+    bool isDir;
     /// Is this directory entry in use?
     bool inUse;
     /// Location on disk to find the `FileHeader` for this file.

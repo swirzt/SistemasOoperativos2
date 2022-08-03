@@ -75,7 +75,7 @@ FileSystem::FileSystem(bool format)
     if (format)
     {
         Bitmap *freeMap = new Bitmap(NUM_SECTORS);
-        Directory *dir = new Directory(dirSize, true);
+        Directory *dir = new Directory(dirSize, DIRECTORY_SECTOR, DIRECTORY_SECTOR);
         FileHeader *mapH = new FileHeader();
         FileHeader *dirH = new FileHeader();
 
@@ -108,6 +108,7 @@ FileSystem::FileSystem(bool format)
         openFilesData->insert("FreeMap", new OpenFileData(freeMapFile));
 
         directoryFile = new OpenFile(DIRECTORY_SECTOR, "Directory");
+        rootDirectoryFile = directoryFile;
         openFilesData->insert("Directory", new OpenFileData(directoryFile));
 
         // Once we have the files “open”, we can write the initial version of
@@ -140,6 +141,7 @@ FileSystem::FileSystem(bool format)
         openFilesData->insert("FreeMap", new OpenFileData(freeMapFile));
 
         directoryFile = new OpenFile(DIRECTORY_SECTOR, "Directory");
+        rootDirectoryFile = directoryFile;
         openFilesData->insert("Directory", new OpenFileData(directoryFile));
     }
     DEBUG('f', "File system initialization done.\n");
@@ -147,7 +149,9 @@ FileSystem::FileSystem(bool format)
 
 FileSystem::~FileSystem()
 {
+    openFilesData->remove("FreeMap");
     delete freeMapFile;
+    openFilesData->remove("Directory");
     delete directoryFile;
 }
 
@@ -182,7 +186,7 @@ bool FileSystem::Create(const char *name)
 
     DEBUG('f', "Creating file %s\n", name);
 
-    Directory *dir = new Directory(dirSize, false);
+    Directory *dir = new Directory(dirSize);
     dir->FetchFrom(directoryFile);
 
     bool success;
@@ -202,7 +206,7 @@ bool FileSystem::Create(const char *name)
             DEBUG('f', "No free space for file header.\n");
             success = false; // No free block for file header.
         }
-        else if (!dir->Add(name, sector))
+        else if (!dir->Add(name, sector, false))
         {
             DEBUG('f', "No free entry for file in directory.\n");
             success = false; // No space in directory.
@@ -215,6 +219,59 @@ bool FileSystem::Create(const char *name)
             freeMap->WriteBack(freeMapFile);
             dir->WriteBack(directoryFile);
             delete h;
+            success = true;
+        }
+
+        delete freeMap;
+    }
+    delete dir;
+    return success;
+}
+
+bool FileSystem::CreateDirectory(const char *name)
+{
+    ASSERT(name != nullptr);
+
+    DEBUG('f', "Creating directory %s\n", name);
+
+    Directory *dir = new Directory(dirSize);
+    dir->FetchFrom(directoryFile);
+
+    bool success;
+
+    if (dir->Find(name) != -1)
+    {
+        success = false; // File is already in directory.
+    }
+    else
+    {
+        Bitmap *freeMap = new Bitmap(NUM_SECTORS);
+        freeMap->FetchFrom(freeMapFile);
+        int sector = freeMap->Find();
+        // Find a sector to hold the file header.
+        if (sector == -1)
+        {
+            DEBUG('f', "No free space for file header.\n");
+            success = false; // No free block for file header.
+        }
+        else if (!dir->Add(name, sector, true))
+        {
+            DEBUG('f', "No free entry for file in directory.\n");
+            success = false; // No space in directory.
+        }
+        else
+        {
+            DEBUG('f', "Sector allocated for file header in %d.\n", sector);
+            FileHeader *h = new FileHeader();
+            h->WriteBack(sector);
+            OpenFile *newdirFile = new OpenFile(sector, h);
+            Directory *newdir = new Directory(NUM_DIR_ENTRIES, directoryFile->GetSector(), sector);
+            newdir->WriteBack(newdirFile);
+            freeMap->WriteBack(freeMapFile);
+            dir->WriteBack(directoryFile);
+
+            delete newdirFile; // En su destruccion se hace delete de h
+            delete newdir;
             success = true;
         }
 
@@ -254,7 +311,7 @@ FileSystem::Open(const char *name)
         }
     }
 
-    Directory *dir = new Directory(dirSize, false);
+    Directory *dir = new Directory(dirSize);
     OpenFile *openFile = nullptr;
 
     DEBUG('f', "Opening file %s\n", name);
@@ -278,7 +335,7 @@ FileSystem::Open(const char *name)
 
 bool FileSystem::CleanFile(const char *name)
 {
-    Directory *dir = new Directory(dirSize, false);
+    Directory *dir = new Directory(dirSize);
     dir->FetchFrom(directoryFile);
     int sector = dir->Find(name);
     if (sector == -1)
@@ -346,7 +403,7 @@ bool FileSystem::Extend(FileHeader *hdr, unsigned size)
 /// List all the files in the file system directory.
 void FileSystem::List()
 {
-    Directory *dir = new Directory(dirSize, false);
+    Directory *dir = new Directory(dirSize);
 
     dir->FetchFrom(directoryFile);
     dir->List();
@@ -531,7 +588,7 @@ bool FileSystem::Check()
 
     Bitmap *freeMap = new Bitmap(NUM_SECTORS);
     freeMap->FetchFrom(freeMapFile);
-    Directory *dir = new Directory(dirSize, false);
+    Directory *dir = new Directory(dirSize);
     const RawDirectory *rdir = dir->GetRaw();
     dir->FetchFrom(directoryFile);
     error |= CheckDirectory(rdir, shadowMap);
@@ -560,7 +617,7 @@ void FileSystem::Print()
     FileHeader *bitH = new FileHeader;
     FileHeader *dirH = new FileHeader;
     Bitmap *freeMap = new Bitmap(NUM_SECTORS);
-    Directory *dir = new Directory(dirSize, true);
+    Directory *dir = new Directory(dirSize);
 
     printf("--------------------------------\n");
     bitH->FetchFrom(FREE_MAP_SECTOR);
@@ -583,4 +640,49 @@ void FileSystem::Print()
     delete dirH;
     delete freeMap;
     delete dir;
+}
+
+bool FileSystem::ChangeDirectory(const char *name)
+{
+    DEBUG('f', "Changing directory to \"%s\".\n", name);
+    Directory *dir = new Directory(dirSize);
+    dir->FetchFrom(directoryFile);
+
+    char path[strlen(name) + 1]; // Lo almacena en heap o en pila? Creemos que en pila, gracias GCC
+    strcpy(path, name);
+
+    char *rest = path;
+    char *token = strtok_r(rest, "/", &rest);
+
+    int sector = dir->Find(token);
+    delete dir;
+    if (sector != -1)
+    {
+        OpenFile *temp = directoryFile;
+        directoryFile = new OpenFile(sector, token);
+        if (strcmp(rest, "") == 0)
+        {
+            DEBUG('f', "Changed directory to \"%s\".\n", token);
+            delete temp;
+            return true;
+        }
+        else
+        {
+            if (ChangeDirectory(rest))
+            {
+                delete temp;
+                return true;
+            }
+            else
+            {
+                directoryFile = temp;
+                return false;
+            }
+        }
+    }
+    else
+    {
+        DEBUG('f', "Directory \"%s\" not found.\n", token);
+        return false;
+    }
 }

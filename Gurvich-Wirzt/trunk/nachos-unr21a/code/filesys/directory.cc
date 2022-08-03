@@ -35,17 +35,40 @@
 /// otherwise, we need to call FetchFrom in order to initialize it from disk.
 ///
 /// * `size` is the number of entries in the directory.
-Directory::Directory(unsigned size, bool init)
+Directory::Directory(unsigned size)
 {
     ASSERT(size > 0);
     raw.tableSize = size;
-    if (init)
+    // if (init)
+    // {
+    //     raw.table = new DirectoryEntry[size];
+    //     for (unsigned i = 0; i < raw.tableSize; i++)
+    //     {
+    //         raw.table[i].inUse = false;
+    //     }
+    // }
+}
+
+// Crear nuevos directorios con un sector padre y un sector actual.
+Directory::Directory(unsigned size, unsigned parentSector, unsigned currentSector)
+{
+    ASSERT(size >= 2);
+    raw.tableSize = size;
+    raw.parentSector = parentSector;
+    raw.table = new DirectoryEntry[size];
+    // -----------------------------
+    raw.table[0].inUse = true;
+    strncpy(raw.table[0].name, "./", 3);
+    raw.table[0].sector = currentSector;
+    raw.table[0].isDir = true;
+    raw.table[1].inUse = true;
+    strncpy(raw.table[1].name, "../", 4);
+    raw.table[1].sector = parentSector;
+    raw.table[1].isDir = true;
+    // -----------------------------
+    for (unsigned i = 2; i < raw.tableSize; i++)
     {
-        raw.table = new DirectoryEntry[size];
-        for (unsigned i = 0; i < raw.tableSize; i++)
-        {
-            raw.table[i].inUse = false;
-        }
+        raw.table[i].inUse = false;
     }
 }
 
@@ -68,6 +91,12 @@ void Directory::FetchFrom(OpenFile *file)
 #ifdef FILESYS
     fileSystem->setDirSize(size);
 #endif
+    // file->ReadAt((char *)&raw.hasParent, sizeof(raw.hasParent), sizeof(size));
+    // if (raw.hasParent)
+    // {
+    file->ReadAt((char *)&raw.parentSector, sizeof(raw.parentSector),
+                 sizeof(size));
+    // }
     file->ReadAt((char *)raw.table,
                  raw.tableSize * sizeof(DirectoryEntry), sizeof(DirectoryEntry));
 }
@@ -79,6 +108,12 @@ void Directory::WriteBack(OpenFile *file)
 {
     ASSERT(file != nullptr);
     file->WriteAt((char *)&raw.tableSize, sizeof(raw.tableSize), 0);
+    // file->WriteAt((char *)&raw.hasParent, sizeof(raw.hasParent), sizeof(raw.tableSize));
+    // if (raw.hasParent)
+    // {
+    file->WriteAt((char *)&raw.parentSector, sizeof(raw.parentSector),
+                  sizeof(raw.tableSize));
+    // }
     file->WriteAt((char *)raw.table,
                   raw.tableSize * sizeof(DirectoryEntry), sizeof(DirectoryEntry));
 }
@@ -124,7 +159,7 @@ int Directory::Find(const char *name)
 ///
 /// * `name` is the name of the file being added.
 /// * `newSector` is the disk sector containing the added file's header.
-bool Directory::Add(const char *name, int newSector)
+bool Directory::Add(const char *name, int newSector, bool isDir)
 {
     ASSERT(name != nullptr);
 
@@ -140,6 +175,7 @@ bool Directory::Add(const char *name, int newSector)
             raw.table[i].inUse = true;
             strncpy(raw.table[i].name, name, FILE_NAME_MAX_LEN);
             raw.table[i].sector = newSector;
+            raw.table[i].isDir = isDir;
             DEBUG('f', "Encontre un hueco en el directorio en la pos %u\n", i);
             return true;
         }
@@ -154,6 +190,7 @@ bool Directory::Add(const char *name, int newSector)
     raw.table[raw.tableSize].inUse = true;
     strncpy(raw.table[raw.tableSize].name, name, FILE_NAME_MAX_LEN);
     raw.table[raw.tableSize].sector = newSector;
+    raw.table[raw.tableSize].isDir = isDir;
     raw.tableSize += NUM_DIR_ENTRYS_SECTOR;
 #ifdef FILESYS
     fileSystem->setDirSize(raw.tableSize);
@@ -203,8 +240,9 @@ void Directory::Print() const
         {
             printf("\nDirectory entry:\n"
                    "    name: %s\n"
-                   "    sector: %u\n",
-                   raw.table[i].name, raw.table[i].sector);
+                   "    sector: %u\n"
+                   "    isDir: %d\n",
+                   raw.table[i].name, raw.table[i].sector, raw.table[i].isDir);
             hdr->FetchFrom(raw.table[i].sector);
             hdr->Print(nullptr);
         }

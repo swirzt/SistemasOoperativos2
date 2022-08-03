@@ -72,7 +72,7 @@ bool FileHeader::Allocate(Bitmap *freeMap, unsigned fileSize)
         raw.dataSectors[i] = freeMap->Find();
     }
 
-    if (raw.numSectors >= NUM_DIRECT)
+    if (raw.numSectors > NUM_DIRECT)
     {
         raw.nextInode = freeMap->Find();
         indirect = new FileHeader();
@@ -116,7 +116,7 @@ bool FileHeader::ExtendFile(Bitmap *freeMap, unsigned extra)
     unsigned cantSectors = DivRoundUp(extra + raw.numBytes, SECTOR_SIZE) - raw.numSectors;
     DEBUG('f', "Necesito agregar %d sectores\n", cantSectors);
     // Entra todo en el primer FileHeader, no hay que actualizar la cadena
-    if (raw.numSectors + cantSectors < NUM_DIRECT)
+    if (raw.numSectors + cantSectors <= NUM_DIRECT)
     {
         DEBUG('f', "Entra todo en el FileHeader\n");
         if (freeMap->CountClear() < cantSectors)
@@ -203,7 +203,7 @@ void FileHeader::Deallocate(Bitmap *freeMap)
 void FileHeader::FetchFrom(unsigned sector)
 {
     synchDisk->ReadSector(sector, (char *)&raw);
-    if (raw.numSectors >= NUM_DIRECT)
+    if (raw.numSectors > NUM_DIRECT)
     {
         indirect = new FileHeader();
         indirect->FetchFrom(raw.nextInode);
@@ -216,7 +216,7 @@ void FileHeader::FetchFrom(unsigned sector)
 void FileHeader::WriteBack(unsigned sector)
 {
     synchDisk->WriteSector(sector, (char *)&raw);
-    if (raw.numSectors >= NUM_DIRECT)
+    if (raw.numSectors > NUM_DIRECT)
     {
         indirect->WriteBack(raw.nextInode);
     }
@@ -288,6 +288,12 @@ void FileHeader::Print(const char *title)
         printf("\n");
     }
     delete[] data;
+
+    if (raw.numSectors > NUM_DIRECT)
+    {
+        printf("    next inode: %u\n", raw.nextInode);
+        indirect->Print(title);
+    }
 }
 
 const RawFileHeader *

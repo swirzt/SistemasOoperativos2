@@ -136,8 +136,8 @@ int main(void)
 
         //    Join(newProc);
 
-        //Funciona mal la opcion con & porque no funciona Thread::Join
-        //No lo podemos solucionar porque no tenemos las correcciones de la plancha 2
+        // Funciona mal la opcion con & porque no funciona Thread::Join
+        // No lo podemos solucionar porque no tenemos las correcciones de la plancha 2
         if (line[0] == '&')
         {
             const SpaceId newProc = Exec(line + 1, argv, 0);

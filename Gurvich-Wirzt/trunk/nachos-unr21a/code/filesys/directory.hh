@@ -30,7 +30,8 @@ class Directory
 {
 public:
     /// Initialize an empty directory with space for `size` files.
-    Directory(unsigned size, bool init);
+    Directory(unsigned size);
+    Directory(unsigned size, unsigned parentSector, unsigned currentSector);
 
     /// De-allocate the directory.
     ~Directory();
@@ -45,7 +46,7 @@ public:
     int Find(const char *name);
 
     /// Add a file name into the directory.
-    bool Add(const char *name, int newSector);
+    bool Add(const char *name, int newSector, bool isDir);
 
     /// Remove a file from the directory.
     bool Remove(const char *name);

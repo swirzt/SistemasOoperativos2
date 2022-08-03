@@ -481,6 +481,48 @@ SyscallHandler(ExceptionType _et)
         break;
     }
 
+    case SC_CD:
+    {
+        int dirNameAddr = machine->ReadRegister(4);
+
+        if (dirNameAddr == 0)
+        {
+            DEBUG('e', "Dir incorrect\n");
+            machine->WriteRegister(2, -1);
+            break;
+        }
+
+        char dirName[MAX_FILE_PATH + 1];
+
+        if (!ReadStringFromUser(dirNameAddr, dirName, MAX_FILE_PATH + 1))
+        {
+            DEBUG('e', "Dir Path too big \n");
+            machine->WriteRegister(2, -1);
+        }
+        else
+        {
+            DEBUG('e', "Changing dir to %s\n", dirName);
+            bool success = fileSystem->ChangeDirectory(dirName);
+            if (success)
+            {
+                DEBUG('e', "Dir changed\n");
+                machine->WriteRegister(2, 0);
+            }
+            else
+            {
+                DEBUG('e', "Dir not found\n");
+                machine->WriteRegister(2, -1);
+            }
+        }
+        break;
+    }
+    case SC_LS:
+    {
+        DEBUG('e', " Listed directory\n");
+        fileSystem->List();
+        machine->WriteRegister(2, 0);
+        break;
+    }
     default:
         fprintf(stderr, "Unexpected system call: id %d.\n", scid);
         ASSERT(false);

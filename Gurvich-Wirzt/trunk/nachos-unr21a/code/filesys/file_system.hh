@@ -85,6 +85,12 @@ public:
         ASSERT(name != nullptr);
         return SystemDep::Unlink(name) == 0;
     }
+    void List() {}
+    bool ChangeDirectory(const char *name)
+    {
+        ASSERT(name != nullptr);
+        return true;
+    }
 };
 
 #else // FILESYS
@@ -136,11 +142,16 @@ public:
 
     void setDirSize(unsigned size);
 
+    bool CreateDirectory(const char *name);
+
+    bool ChangeDirectory(const char *name);
+
 private:
-    OpenFile *freeMapFile;   ///< Bit map of free disk blocks, represented as a
-                             ///< file.
-    OpenFile *directoryFile; ///< “Root” directory -- list of file names,
-                             ///< represented as a file.
+    OpenFile *freeMapFile;       ///< Bit map of free disk blocks, represented as a
+                                 ///< file.
+    OpenFile *directoryFile;     ///< “Root” directory -- list of file names,
+                                 ///< represented as a file.
+    OpenFile *rootDirectoryFile; ///< Root directory file. En teoria este solo lo vamos a usar para buscar (Por ahora)
 
     /// Remove a file from the filesystem.
     bool CleanFile(const char *name);

@@ -35,6 +35,14 @@ OpenFile::OpenFile(int sector, const char *name)
     filename = temp;
 }
 
+OpenFile::OpenFile(int sector, FileHeader *head)
+{
+    hdr = head;
+    seekPositionList = new LinkedList<int, unsigned>(intcomp);
+    seekPositionList->insert(currentThread->pid, 0);
+    hdrSector = sector;
+}
+
 /// Close a Nachos file, de-allocating any in-memory data structures.
 OpenFile::~OpenFile()
 {
@@ -268,4 +276,9 @@ void OpenFile::AddSeekPosition(unsigned position)
 const char *OpenFile::GetName() const
 {
     return filename;
+}
+
+int OpenFile::GetSector() const
+{
+    return hdrSector;
 }

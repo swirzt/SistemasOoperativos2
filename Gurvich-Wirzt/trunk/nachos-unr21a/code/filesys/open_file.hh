@@ -92,6 +92,9 @@ public:
     /// Open a file whose header is located at `sector` on the disk.
     OpenFile(int sector, const char *name);
 
+    /// Usar este constructor para casos especificos de filesystem
+    OpenFile(int sector, FileHeader *head);
+
     /// Close the file.
     ~OpenFile();
 
@@ -117,6 +120,8 @@ public:
     void AddSeekPosition(unsigned pid);
 
     const char *GetName() const;
+
+    int GetSector() const;
 
 private:
     FileHeader *hdr; ///< Header for this file.
