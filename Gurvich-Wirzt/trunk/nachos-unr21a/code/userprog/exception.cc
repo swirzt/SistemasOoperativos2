@@ -523,6 +523,39 @@ SyscallHandler(ExceptionType _et)
         machine->WriteRegister(2, 0);
         break;
     }
+    case SC_MKDIR:
+    {
+        int dirNameAddr = machine->ReadRegister(4);
+
+        if (dirNameAddr == 0)
+        {
+            DEBUG('e', "Dir name error\n");
+            machine->WriteRegister(2, -1);
+            break;
+        }
+
+        char dirName[FILE_NAME_MAX_LEN + 1];
+
+        if (!ReadStringFromUser(dirNameAddr, dirName, FILE_NAME_MAX_LEN + 1))
+        {
+            DEBUG('e', "DirName too big \n");
+            machine->WriteRegister(2, -1);
+        }
+        else
+        {
+            if (fileSystem->CreateDirectory(dirName))
+            {
+                DEBUG('e', "Succesfully created a new directory with name %s \n", dirName);
+                machine->WriteRegister(2, 0);
+            }
+            else
+            {
+                DEBUG('e', "Error when creating a new directory with name %s \n", dirName);
+                machine->WriteRegister(2, -1);
+            }
+        }
+        break;
+    }
     default:
         fprintf(stderr, "Unexpected system call: id %d.\n", scid);
         ASSERT(false);

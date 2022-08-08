@@ -53,15 +53,18 @@ Directory::Directory(unsigned size)
 Directory::Directory(unsigned size, unsigned parentSector, unsigned currentSector)
 {
     ASSERT(size >= 2);
+    DEBUG('f', "Creando directorio con %d entradas.\n", size);
     raw.tableSize = size;
     raw.parentSector = parentSector;
     raw.table = new DirectoryEntry[size];
     // -----------------------------
+    DEBUG('f', "Creando directorio ./.\n");
     raw.table[0].inUse = true;
     strncpy(raw.table[0].name, "./", 3);
     raw.table[0].sector = currentSector;
     raw.table[0].isDir = true;
     raw.table[1].inUse = true;
+    DEBUG('f', "Creando directorio ../.\n");
     strncpy(raw.table[1].name, "../", 4);
     raw.table[1].sector = parentSector;
     raw.table[1].isDir = true;
@@ -107,6 +110,7 @@ void Directory::FetchFrom(OpenFile *file)
 void Directory::WriteBack(OpenFile *file)
 {
     ASSERT(file != nullptr);
+    printf("TAMAÑO %d\n", raw.tableSize);
     file->WriteAt((char *)&raw.tableSize, sizeof(raw.tableSize), 0);
     // file->WriteAt((char *)&raw.hasParent, sizeof(raw.hasParent), sizeof(raw.tableSize));
     // if (raw.hasParent)
@@ -218,6 +222,7 @@ bool Directory::Remove(const char *name)
 /// List all the file names in the directory.
 void Directory::List() const
 {
+    DEBUG('e', "Tamanio de la tabla: %d\n", raw.tableSize);
     for (unsigned i = 0; i < raw.tableSize; i++)
     {
         if (raw.table[i].inUse)

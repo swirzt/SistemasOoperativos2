@@ -93,7 +93,7 @@ public:
     OpenFile(int sector, const char *name);
 
     /// Usar este constructor para casos especificos de filesystem
-    OpenFile(int sector, FileHeader *head);
+    OpenFile(int sector, FileHeader *head, const char *name);
 
     /// Close the file.
     ~OpenFile();

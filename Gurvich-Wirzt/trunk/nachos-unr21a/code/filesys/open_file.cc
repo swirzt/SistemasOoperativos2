@@ -35,12 +35,15 @@ OpenFile::OpenFile(int sector, const char *name)
     filename = temp;
 }
 
-OpenFile::OpenFile(int sector, FileHeader *head)
+OpenFile::OpenFile(int sector, FileHeader *head, const char *name)
 {
     hdr = head;
     seekPositionList = new LinkedList<int, unsigned>(intcomp);
     seekPositionList->insert(currentThread->pid, 0);
     hdrSector = sector;
+    char *temp = new char[strlen(name) + 1];
+    strcpy(temp, name);
+    filename = temp;
 }
 
 /// Close a Nachos file, de-allocating any in-memory data structures.

@@ -4,8 +4,5 @@
 int main()
 {
     Ls();
-    Mkdir("Test");
-    Cd("Test");
-    Ls();
     return 0;
 }

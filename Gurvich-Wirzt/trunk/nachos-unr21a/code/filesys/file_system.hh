@@ -91,6 +91,11 @@ public:
         ASSERT(name != nullptr);
         return true;
     }
+    bool CreateDirectory(const char *name)
+    {
+        ASSERT(name != nullptr);
+        return true;
+    }
 };
 
 #else // FILESYS

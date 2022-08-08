@@ -264,13 +264,16 @@ bool FileSystem::CreateDirectory(const char *name)
             DEBUG('f', "Sector allocated for file header in %d.\n", sector);
             FileHeader *h = new FileHeader();
             h->WriteBack(sector);
-            OpenFile *newdirFile = new OpenFile(sector, h);
+            OpenFile *newdirFile = new OpenFile(sector, h, name);
+            OpenFileData *temp = new OpenFileData(newdirFile);
+            openFilesData->insert(name, temp);
             Directory *newdir = new Directory(NUM_DIR_ENTRIES, directoryFile->GetSector(), sector);
             newdir->WriteBack(newdirFile);
+            openFilesData->remove(name);
             freeMap->WriteBack(freeMapFile);
             dir->WriteBack(directoryFile);
 
-            delete newdirFile; // En su destruccion se hace delete de h
+            delete temp; // En su destruccion se hace delete de newDirFIle y h
             delete newdir;
             success = true;
         }
@@ -306,6 +309,7 @@ FileSystem::Open(const char *name)
             DEBUG('f', "Abriendo el archivo %s ya abierto por otro hilo\n", name);
             data->dataLock->Acquire();
             data->numOpens++;
+            data->file->AddSeekPosition(0);
             data->dataLock->Release();
             return data->file;
         }
@@ -645,21 +649,20 @@ void FileSystem::Print()
 bool FileSystem::ChangeDirectory(const char *name)
 {
     DEBUG('f', "Changing directory to \"%s\".\n", name);
-    Directory *dir = new Directory(dirSize);
-    dir->FetchFrom(directoryFile);
+    // Directory *dir = new Directory(dirSize);
+    // dir->FetchFrom(directoryFile);
 
     char path[strlen(name) + 1]; // Lo almacena en heap o en pila? Creemos que en pila, gracias GCC
     strcpy(path, name);
 
     char *rest = path;
     char *token = strtok_r(rest, "/", &rest);
+    OpenFile *newDir = Open(token);
 
-    int sector = dir->Find(token);
-    delete dir;
-    if (sector != -1)
+    if (newDir)
     {
         OpenFile *temp = directoryFile;
-        directoryFile = new OpenFile(sector, token);
+        directoryFile = newDir;
         if (strcmp(rest, "") == 0)
         {
             DEBUG('f', "Changed directory to \"%s\".\n", token);

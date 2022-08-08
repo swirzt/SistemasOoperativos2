@@ -70,6 +70,8 @@ public:
     bool ExtendFile(Bitmap *bitMap, unsigned extra);
 
 private:
+    void PrintIndirect(unsigned sector);
+
     RawFileHeader raw;
 };
 

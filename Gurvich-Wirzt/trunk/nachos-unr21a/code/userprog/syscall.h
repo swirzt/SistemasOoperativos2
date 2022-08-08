@@ -32,6 +32,7 @@
 #define SC_WRITE 15
 #define SC_CD 16
 #define SC_LS 17
+#define SC_MKDIR 18
 
 #ifndef IN_ASM
 
@@ -122,6 +123,8 @@ int Close(OpenFileId id);
 int Cd(const char *name);
 
 int Ls();
+
+int Mkdir(const char *name);
 
 #endif
 

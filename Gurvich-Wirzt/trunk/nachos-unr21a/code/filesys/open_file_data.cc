@@ -18,7 +18,7 @@ OpenFileData::OpenFileData(OpenFile *fil)
 
 OpenFileData::~OpenFileData()
 {
-    ASSERT(numOpens == 0);
+    // ASSERT(numOpens == 0);
     if (deleted)
     {
         DEBUG('f', "Eliminando archivo %s\n", file->GetName());

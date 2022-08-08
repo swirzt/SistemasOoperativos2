@@ -149,6 +149,14 @@ Ls:
         j       $31
         .end    Ls
 
+        .globl  Mkdir
+        .ent    Mkdir
+Mkdir:
+        addiu   $2, $0, SC_MKDIR
+        syscall
+        j       $31
+        .end    Mkdir
+
 /// Dummy function to keep gcc happy.
         .globl  __main
         .ent    __main

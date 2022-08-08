@@ -290,10 +290,44 @@ void FileHeader::Print(const char *title)
     delete[] data;
 
     if (raw.numSectors > NUM_DIRECT)
+        indirect->PrintIndirect(raw.nextInode);
+}
+
+void FileHeader::PrintIndirect(unsigned sector)
+{
+    char *data = new char[SECTOR_SIZE];
+    printf("--->Indirect header\n"
+           "    isector: %u\n"
+           "    size: %u bytes\n"
+           "    block indexes: ",
+           sector, raw.numBytes);
+    for (unsigned i = 0; i < raw.numSectors && i < NUM_DIRECT; i++)
     {
-        printf("    next inode: %u\n", raw.nextInode);
-        indirect->Print(title);
+        printf("%u ", raw.dataSectors[i]);
     }
+    printf("\n");
+
+    for (unsigned i = 0, k = 0; i < raw.numSectors && i < NUM_DIRECT; i++)
+    {
+        printf("    contents of block %u:\n", raw.dataSectors[i]);
+        synchDisk->ReadSector(raw.dataSectors[i], data);
+        for (unsigned j = 0; j < SECTOR_SIZE && k < raw.numBytes; j++, k++)
+        {
+            if (isprint(data[j]))
+            {
+                printf("%c", data[j]);
+            }
+            else
+            {
+                printf("\\%X", (unsigned char)data[j]);
+            }
+        }
+        printf("\n");
+    }
+    delete[] data;
+
+    if (raw.numSectors > NUM_DIRECT)
+        indirect->PrintIndirect(raw.nextInode);
 }
 
 const RawFileHeader *
