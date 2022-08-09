@@ -375,25 +375,7 @@ SyscallHandler(ExceptionType _et)
         {
             DEBUG('e', "Closed file %u", fid);
 #ifndef FILESYS_STUB
-            const char *name = archivo->GetName();
-
-            OpenFileData *data;
-            openFilesData->get(name, &data);
-
-            data->dataLock->Acquire();
-            data->numOpens--;
-            if (data->numOpens > 0)
-            {
-                DEBUG('f', "Quedan %d lectores en %s\n", data->numOpens, name);
-                data->dataLock->Release();
-            }
-            else
-            {
-                DEBUG('f', "Soy el ultimo que lee en %s\n", name);
-                data->dataLock->Release();
-                openFilesData->remove(name);
-                delete data;
-            }
+            fileSystem->Close(archivo);
 #else
             delete archivo;
 #endif
@@ -471,8 +453,10 @@ SyscallHandler(ExceptionType _et)
             hilo->space = memoria;
             hilo->Fork(initialize, args);
             DEBUG('e', "Initialized new exec thread \n");
-#ifdef FILESYS_STUB
 #ifndef DEMAND_LOADING
+#ifndef FILESYS_STUB
+            fileSystem->Close(archivo);
+#else
             delete archivo;
 #endif
 #endif

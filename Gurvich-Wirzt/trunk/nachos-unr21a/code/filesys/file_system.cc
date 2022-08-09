@@ -45,6 +45,7 @@
 #include "directory.hh"
 #include "file_header.hh"
 #include "lib/bitmap.hh"
+#include "lib/utility.hh"
 #include "threads/system.hh"
 #include "threads/lock.hh"
 #include "threads/condition.hh"
@@ -268,9 +269,9 @@ bool FileSystem::CreateDirectory(const char *name)
             OpenFileData *temp = new OpenFileData(newdirFile);
             openFilesData->insert(name, temp);
             Directory *newdir = new Directory(NUM_DIR_ENTRIES, directoryFile->GetSector(), sector);
+            freeMap->WriteBack(freeMapFile);
             newdir->WriteBack(newdirFile);
             openFilesData->remove(name);
-            freeMap->WriteBack(freeMapFile);
             dir->WriteBack(directoryFile);
 
             delete temp; // En su destruccion se hace delete de newDirFIle y h
@@ -335,6 +336,29 @@ FileSystem::Open(const char *name)
     }
 
     return openFile; // Return null if not found.
+}
+
+void FileSystem::Close(OpenFile *file)
+{
+    const char *name = file->GetName();
+
+    OpenFileData *data;
+    openFilesData->get(name, &data);
+
+    data->dataLock->Acquire();
+    data->numOpens--;
+    if (data->numOpens > 0)
+    {
+        DEBUG('f', "Quedan %d lectores en %s\n", data->numOpens, name);
+        data->dataLock->Release();
+    }
+    else
+    {
+        DEBUG('f', "Soy el ultimo que lee en %s\n", name);
+        openFilesData->remove(name);
+        data->dataLock->Release();
+        delete data;
+    }
 }
 
 bool FileSystem::CleanFile(const char *name)
@@ -653,11 +677,9 @@ bool FileSystem::ChangeDirectory(const char *name)
     // dir->FetchFrom(directoryFile);
 
     char path[strlen(name) + 1]; // Lo almacena en heap o en pila? Creemos que en pila, gracias GCC
-    strcpy(path, name);
+    const char *rest = get_filepath(name, path);
 
-    char *rest = path;
-    char *token = strtok_r(rest, "/", &rest);
-    OpenFile *newDir = Open(token);
+    OpenFile *newDir = Open(path);
 
     if (newDir)
     {
@@ -665,19 +687,20 @@ bool FileSystem::ChangeDirectory(const char *name)
         directoryFile = newDir;
         if (strcmp(rest, "") == 0)
         {
-            DEBUG('f', "Changed directory to \"%s\".\n", token);
-            delete temp;
+            DEBUG('f', "Changed directory to \"%s\".\n", path);
+            Close(temp);
             return true;
         }
         else
         {
             if (ChangeDirectory(rest))
             {
-                delete temp;
+                Close(temp);
                 return true;
             }
             else
             {
+                Close(newDir);
                 directoryFile = temp;
                 return false;
             }
@@ -685,7 +708,7 @@ bool FileSystem::ChangeDirectory(const char *name)
     }
     else
     {
-        DEBUG('f', "Directory \"%s\" not found.\n", token);
+        DEBUG('f', "Directory \"%s\" not found.\n", path);
         return false;
     }
 }

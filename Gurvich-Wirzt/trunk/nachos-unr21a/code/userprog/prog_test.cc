@@ -33,8 +33,13 @@ void StartProcess(const char *filename)
     currentThread->space = space;
 
 #ifndef DEMAND_LOADING
+#ifndef FILESYS_STUB
+    fileSystem->Close(executable);
+#else
     delete executable;
 #endif
+#endif
+
     space->InitRegisters(); // Set the initial register values.
     space->RestoreState();  // Load page table register.
 

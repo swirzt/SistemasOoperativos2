@@ -70,7 +70,7 @@ void Copy(const char *from, const char *to)
     delete[] buffer;
 
     // Close the UNIX and the Nachos files.
-    delete openFile;
+    fileSystem->Close(openFile);
     fclose(fp);
 }
 
@@ -97,7 +97,7 @@ void Print(const char *name)
     }
 
     delete[] buffer;
-    delete openFile; // close the Nachos file
+    fileSystem->Close(openFile); // close the Nachos file
 }
 
 /// Performance test
@@ -145,7 +145,7 @@ FileWrite()
         }
     }
 
-    delete openFile;
+    fileSystem->Close(openFile);
 }
 
 static void
@@ -173,7 +173,7 @@ FileRead()
     }
 
     delete[] buffer;
-    delete openFile;
+    fileSystem->Close(openFile);
 }
 
 void PerformanceTest()

@@ -128,6 +128,8 @@ public:
     /// Open a file (UNIX `open`).
     OpenFile *Open(const char *name);
 
+    void Close(OpenFile *openFile);
+
     /// Delete a file (UNIX `unlink`).
     bool Remove(const char *name);
 

@@ -16,3 +16,22 @@ bool strcomp(const char *s1, const char *s2)
 {
     return !strcmp(s1, s2);
 }
+
+// Parse a string and get substring before /
+const char *get_filepath(const char *str, char *substr)
+{
+    // char *p = str;
+    // char *q = substr;
+    while (*str != '/' && *str != '\0')
+    {
+        *substr = *str;
+        str++;
+        substr++;
+    }
+    *substr = '\0';
+
+    if (*str == '/')
+        return str + 1;
+    else
+        return str;
+}

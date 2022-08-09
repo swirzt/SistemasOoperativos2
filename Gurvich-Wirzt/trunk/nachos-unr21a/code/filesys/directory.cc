@@ -60,12 +60,12 @@ Directory::Directory(unsigned size, unsigned parentSector, unsigned currentSecto
     // -----------------------------
     DEBUG('f', "Creando directorio ./.\n");
     raw.table[0].inUse = true;
-    strncpy(raw.table[0].name, "./", 3);
+    strncpy(raw.table[0].name, ".", 3);
     raw.table[0].sector = currentSector;
     raw.table[0].isDir = true;
     raw.table[1].inUse = true;
     DEBUG('f', "Creando directorio ../.\n");
-    strncpy(raw.table[1].name, "../", 4);
+    strncpy(raw.table[1].name, "..", 4);
     raw.table[1].sector = parentSector;
     raw.table[1].isDir = true;
     // -----------------------------
@@ -110,7 +110,6 @@ void Directory::FetchFrom(OpenFile *file)
 void Directory::WriteBack(OpenFile *file)
 {
     ASSERT(file != nullptr);
-    printf("TAMAÑO %d\n", raw.tableSize);
     file->WriteAt((char *)&raw.tableSize, sizeof(raw.tableSize), 0);
     // file->WriteAt((char *)&raw.hasParent, sizeof(raw.hasParent), sizeof(raw.tableSize));
     // if (raw.hasParent)
@@ -222,12 +221,12 @@ bool Directory::Remove(const char *name)
 /// List all the file names in the directory.
 void Directory::List() const
 {
-    DEBUG('e', "Tamanio de la tabla: %d\n", raw.tableSize);
     for (unsigned i = 0; i < raw.tableSize; i++)
     {
         if (raw.table[i].inUse)
         {
-            printf("%s\n", raw.table[i].name);
+            raw.table[i].isDir ? printf("%s/\n", raw.table[i].name) : printf("%s\n", raw.table[i].name);
+            // printf("%s\n", raw.table[i].name);
         }
     }
 }
@@ -244,10 +243,10 @@ void Directory::Print() const
         if (raw.table[i].inUse)
         {
             printf("\nDirectory entry:\n"
-                   "    name: %s\n"
+                   "    name: %s%c\n"
                    "    sector: %u\n"
                    "    isDir: %d\n",
-                   raw.table[i].name, raw.table[i].sector, raw.table[i].isDir);
+                   raw.table[i].name, raw.table[i].isDir ? '/' : '\0', raw.table[i].sector, raw.table[i].isDir);
             hdr->FetchFrom(raw.table[i].sector);
             hdr->Print(nullptr);
         }

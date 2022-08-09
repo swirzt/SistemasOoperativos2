@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "stdio.h"
+#include "lib.c"
 
 #define MAX_LINE_SIZE 60
 #define MAX_ARG_COUNT 32
@@ -140,13 +141,43 @@ int main(void)
         // No lo podemos solucionar porque no tenemos las correcciones de la plancha 2
         if (line[0] == '&')
         {
-            const SpaceId newProc = Exec(line + 1, argv, 0);
+            if (strcmp(line, "ls") == 0)
+            {
+                Ls();
+            }
+            else if (strcmp(line, "cd") == 0)
+            {
+                Cd((const char *)(argv[1]));
+            }
+            else if (strcmp(line, "mkdir") == 0)
+            {
+                Mkdir((const char *)(argv[1]));
+            }
+            else
+            {
+                Exec(line + 1, argv, 0);
+            }
         }
         else
         {
-            const SpaceId newProc = Exec(line, argv, 1);
-            if (newProc >= 0)
-                Join(newProc);
+            if (strcmp(line, "ls") == 0)
+            {
+                Ls();
+            }
+            else if (strcmp(line, "cd") == 0)
+            {
+                Cd((const char *)(argv[1]));
+            }
+            else if (strcmp(line, "mkdir") == 0)
+            {
+                Mkdir((const char *)(argv[1]));
+            }
+            else
+            {
+                const SpaceId newProc = Exec(line, argv, 1);
+                if (newProc >= 0)
+                    Join(newProc);
+            }
         }
 
         // TODO: is it necessary to check for errors after `Join` too, or
