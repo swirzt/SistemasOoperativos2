@@ -297,12 +297,13 @@ FileSystem::Open(const char *name)
 {
     ASSERT(name != nullptr);
     OpenFileData *data;
-
+    openFilesDataLock->Acquire();
     if (openFilesData->get(name, &data))
     {
         if (data->deleted)
         {
             DEBUG('f', "Quise abrir el archivo %s pero esta marcado para borrarse\n", name);
+            openFilesDataLock->Release();
             return nullptr;
         }
         else
@@ -312,9 +313,11 @@ FileSystem::Open(const char *name)
             data->numOpens++;
             data->file->AddSeekPosition(0);
             data->dataLock->Release();
+            openFilesDataLock->Release();
             return data->file;
         }
     }
+    openFilesDataLock->Release();
 
     Directory *dir = new Directory(dirSize);
     OpenFile *openFile = nullptr;
@@ -343,6 +346,7 @@ void FileSystem::Close(OpenFile *file)
     const char *name = file->GetName();
 
     OpenFileData *data;
+    openFilesDataLock->Acquire();
     openFilesData->get(name, &data);
 
     data->dataLock->Acquire();
@@ -359,6 +363,7 @@ void FileSystem::Close(OpenFile *file)
         data->dataLock->Release();
         delete data;
     }
+    openFilesDataLock->Release();
 }
 
 bool FileSystem::CleanFile(const char *name)
@@ -405,16 +410,20 @@ bool FileSystem::Remove(const char *name)
 {
     ASSERT(name != nullptr);
     OpenFileData *data;
-
+    openFilesDataLock->Acquire();
     if (openFilesData->get(name, &data))
     {
         data->dataLock->Acquire();
         data->deleted = true;
         data->dataLock->Release();
+        openFilesDataLock->Acquire();
         return true;
     }
     else
+    {
+        openFilesDataLock->Acquire();
         return CleanFile(name);
+    }
 }
 
 bool FileSystem::Extend(FileHeader *hdr, unsigned size)

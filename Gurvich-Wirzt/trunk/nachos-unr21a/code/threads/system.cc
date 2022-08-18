@@ -52,6 +52,7 @@ FileSystem *fileSystem;
 #ifdef FILESYS
 SynchDisk *synchDisk;
 OpenFilesList *openFilesData;
+Lock *openFilesDataLock;
 #endif
 
 #ifdef USER_PROGRAM // Requires either *FILESYS* or *FILESYS_STUB*.
@@ -290,6 +291,7 @@ void Initialize(int argc, char **argv)
 #ifdef FILESYS
     synchDisk = new SynchDisk("DISK");
     openFilesData = new OpenFilesList(strcomp);
+    openFilesDataLock = new Lock("openFilesDataLock");
 #endif
 
 #ifdef FILESYS_NEEDED
@@ -327,6 +329,8 @@ void Cleanup()
 
 #ifdef FILESYS
     delete synchDisk;
+    delete openFilesData;
+    delete openFilesDataLock;
 #endif
 
     delete timer;

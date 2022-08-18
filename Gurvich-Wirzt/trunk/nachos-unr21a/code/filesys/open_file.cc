@@ -151,7 +151,9 @@ int OpenFile::ReadAt(char *into, unsigned numBytes, unsigned position)
     numSectors = 1 + lastSector - firstSector;
 
     OpenFileData *sdata;
+    openFilesDataLock->Acquire();
     ASSERT(openFilesData->get(this->filename, &sdata));
+    openFilesDataLock->Release();
 
     // Algoritmo para empezar a leer ----
     sdata->lock->Acquire();
@@ -234,7 +236,9 @@ int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
     memcpy(&buf[position - firstSector * SECTOR_SIZE], from, numBytes);
 
     OpenFileData *sdata;
+    openFilesDataLock->Acquire();
     ASSERT(openFilesData->get(this->filename, &sdata));
+    openFilesDataLock->Release();
 
     // Algoritmo para empezar a escribir ----
     sdata->lock->Acquire();

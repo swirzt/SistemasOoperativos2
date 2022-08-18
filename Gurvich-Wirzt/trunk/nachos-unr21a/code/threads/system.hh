@@ -65,6 +65,7 @@ extern SynchDisk *synchDisk;
 #include "filesys/open_file_data.hh"
 typedef LinkedList<const char *, OpenFileData *> OpenFilesList;
 extern OpenFilesList *openFilesData;
+extern Lock *openFilesDataLock;
 
 #endif
 

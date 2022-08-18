@@ -391,7 +391,7 @@ void AddressSpace::WriteToSwap(unsigned vpn, int phy)
     TranslationEntry *tlb = machine->GetMMU()->tlb;
     for (unsigned i = 0; i < TLB_SIZE; i++)
     {
-      if (tlb[i].physicalPage == phy && tlb[i].valid)
+      if (tlb[i].valid && tlb[i].physicalPage == phy)
       {
         pageTable[vpn] = tlb[i];
         tlb[i].valid = false;

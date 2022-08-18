@@ -445,17 +445,14 @@ SyscallHandler(ExceptionType _et)
         {
             DEBUG('e', "Creating a new thread\n");
             Thread *hilo = new Thread(filename, joinable, 0);
-#ifdef SWAP
             AddressSpace *memoria = new AddressSpace(archivo, hilo->pid);
-#else
-            AddressSpace *memoria = new AddressSpace(archivo, 0);
-#endif
             hilo->space = memoria;
             hilo->Fork(initialize, args);
             DEBUG('e', "Initialized new exec thread \n");
 #ifndef DEMAND_LOADING
 #ifndef FILESYS_STUB
             fileSystem->Close(archivo);
+            DEBUG('e', "ACA BORRE DESPUES DE LLAMAR A EXEC, ESTO ESTA MAL!!!!\n");
 #else
             delete archivo;
 #endif
