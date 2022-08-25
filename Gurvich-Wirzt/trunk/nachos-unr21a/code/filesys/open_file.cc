@@ -128,6 +128,11 @@ int OpenFile::Write(const char *into, unsigned numBytes)
 
 int OpenFile::ReadAt(char *into, unsigned numBytes, unsigned position)
 {
+    return ReadSys(into, numBytes, position, false);
+}
+
+int OpenFile::ReadSys(char *into, unsigned numBytes, unsigned position, bool isSys)
+{
     ASSERT(into != nullptr);
     ASSERT(numBytes > 0);
 
@@ -151,17 +156,20 @@ int OpenFile::ReadAt(char *into, unsigned numBytes, unsigned position)
     numSectors = 1 + lastSector - firstSector;
 
     OpenFileData *sdata;
-    openFilesDataLock->Acquire();
-    ASSERT(openFilesData->get(this->filename, &sdata));
-    openFilesDataLock->Release();
+    if (!isSys)
+    {
+        openFilesDataLock->Acquire();
+        ASSERT(openFilesData->get(this->filename, &sdata));
+        openFilesDataLock->Release();
 
-    // Algoritmo para empezar a leer ----
-    sdata->lock->Acquire();
-    while (sdata->numWriters > 0 || sdata->writerActive)
-        sdata->condition->Wait();
-    sdata->numReaders++;
-    sdata->lock->Release();
-    // fin de empezar a leer ----
+        // Algoritmo para empezar a leer ----
+        sdata->lock->Acquire();
+        while (sdata->numWriters > 0 || sdata->writerActive)
+            sdata->condition->Wait();
+        sdata->numReaders++;
+        sdata->lock->Release();
+        // fin de empezar a leer ----
+    }
 
     // Read in all the full and partial sectors that we need.
     buf = new char[numSectors * SECTOR_SIZE];
@@ -174,19 +182,27 @@ int OpenFile::ReadAt(char *into, unsigned numBytes, unsigned position)
     // Copy the part we want.
     memcpy(into, &buf[position - firstSector * SECTOR_SIZE], numBytes);
 
-    // algoritmo para terminar de leer
-    sdata->lock->Acquire();
-    sdata->numReaders--;
-    if (sdata->numReaders == 0)
-        sdata->condition->Broadcast();
-    sdata->lock->Release();
-    // fin de terminar de leer
+    if (!isSys)
+    {
+        // algoritmo para terminar de leer
+        sdata->lock->Acquire();
+        sdata->numReaders--;
+        if (sdata->numReaders == 0)
+            sdata->condition->Broadcast();
+        sdata->lock->Release();
+        // fin de terminar de leer
+    }
 
     delete[] buf;
     return numBytes;
 }
 
 int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
+{
+    return WriteSys(from, numBytes, position, false);
+}
+
+int OpenFile::WriteSys(const char *from, unsigned numBytes, unsigned position, bool isSys)
 {
     ASSERT(from != nullptr);
     ASSERT(numBytes > 0);
@@ -201,7 +217,7 @@ int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
     {
         DEBUG('f', "Me pase de largo, voy a agrandar el archivo %s, su tamaño actual es %u\n", filename, fileLength);
         unsigned left = position + numBytes - fileLength;
-        if (!fileSystem->Extend(hdr, left))
+        if (!fileSystem->Extend(hdr, left, isSys))
         {
             return 0; // Could not write
         }
@@ -224,32 +240,34 @@ int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
     // Read in first and last sector, if they are to be partially modified.
     if (!firstAligned)
     {
-        ReadAt(buf, SECTOR_SIZE, firstSector * SECTOR_SIZE);
+        ReadSys(buf, SECTOR_SIZE, firstSector * SECTOR_SIZE, isSys);
     }
     if (!lastAligned && (firstSector != lastSector || firstAligned))
     {
-        ReadAt(&buf[(lastSector - firstSector) * SECTOR_SIZE],
-               SECTOR_SIZE, lastSector * SECTOR_SIZE);
+        ReadSys(&buf[(lastSector - firstSector) * SECTOR_SIZE],
+                SECTOR_SIZE, lastSector * SECTOR_SIZE, isSys);
     }
 
     // Copy in the bytes we want to change.
     memcpy(&buf[position - firstSector * SECTOR_SIZE], from, numBytes);
 
     OpenFileData *sdata;
-    openFilesDataLock->Acquire();
-    ASSERT(openFilesData->get(this->filename, &sdata));
-    openFilesDataLock->Release();
+    if (!isSys)
+    {
+        openFilesDataLock->Acquire();
+        ASSERT(openFilesData->get(this->filename, &sdata));
+        openFilesDataLock->Release();
 
-    // Algoritmo para empezar a escribir ----
-    sdata->lock->Acquire();
-    sdata->numWriters++;
-    while (sdata->numReaders > 0 || sdata->writerActive)
-        sdata->condition->Wait();
-    sdata->numWriters--;
-    sdata->writerActive = true;
-    sdata->lock->Release();
-    // fin de empezar a escribir ----
-
+        // Algoritmo para empezar a escribir ----
+        sdata->lock->Acquire();
+        sdata->numWriters++;
+        while (sdata->numReaders > 0 || sdata->writerActive)
+            sdata->condition->Wait();
+        sdata->numWriters--;
+        sdata->writerActive = true;
+        sdata->lock->Release();
+        // fin de empezar a escribir ----
+    }
     // Write modified sectors back.
     for (unsigned i = firstSector; i <= lastSector; i++)
     {
@@ -257,12 +275,14 @@ int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
                                &buf[(i - firstSector) * SECTOR_SIZE]);
     }
 
-    // Algoritmo para terminar de escribir ----
-    sdata->lock->Acquire();
-    sdata->writerActive = false;
-    sdata->condition->Broadcast();
-    sdata->lock->Release();
-    // fin de terminar de escribir ----
+    if (!isSys)
+    { // Algoritmo para terminar de escribir ----
+        sdata->lock->Acquire();
+        sdata->writerActive = false;
+        sdata->condition->Broadcast();
+        sdata->lock->Release();
+        // fin de terminar de escribir ----
+    }
 
     delete[] buf;
     return numBytes;

@@ -89,6 +89,7 @@
 void Copy(const char *unixFile, const char *nachosFile);
 void Print(const char *file);
 void PerformanceTest(void);
+void ConcurrentFSTest(void);
 void StartProcess(const char *file);
 void ConsoleTest(const char *in, const char *out);
 void MailTest(int networkID);
@@ -201,6 +202,10 @@ int main(int argc, char **argv)
         else if (!strcmp(*argv, "-tf"))
         { // Performance test.
             PerformanceTest();
+        }
+        else if (!strcmp(*argv, "-cfw"))
+        {
+            ConcurrentFSTest();
         }
 #endif
 #ifdef NETWORK

@@ -106,11 +106,9 @@ FileSystem::FileSystem(bool format)
         // The file system operations assume these two files are left open
         // while Nachos is running.
         freeMapFile = new OpenFile(FREE_MAP_SECTOR, "FreeMap");
-        openFilesData->insert("FreeMap", new OpenFileData(freeMapFile));
 
         directoryFile = new OpenFile(DIRECTORY_SECTOR, "Directory");
         rootDirectoryFile = directoryFile;
-        openFilesData->insert("Directory", new OpenFileData(directoryFile));
 
         // Once we have the files “open”, we can write the initial version of
         // each file back to disk.  The directory at this point is completely
@@ -139,21 +137,21 @@ FileSystem::FileSystem(bool format)
         // representing the bitmap and directory; these are left open while
         // Nachos is running.
         freeMapFile = new OpenFile(FREE_MAP_SECTOR, "FreeMap");
-        openFilesData->insert("FreeMap", new OpenFileData(freeMapFile));
 
         directoryFile = new OpenFile(DIRECTORY_SECTOR, "Directory");
         rootDirectoryFile = directoryFile;
-        openFilesData->insert("Directory", new OpenFileData(directoryFile));
     }
     DEBUG('f', "File system initialization done.\n");
 }
 
 FileSystem::~FileSystem()
 {
-    openFilesData->remove("FreeMap");
     delete freeMapFile;
-    openFilesData->remove("Directory");
-    delete directoryFile;
+    if (directoryFile != rootDirectoryFile)
+    {
+        delete directoryFile;
+    }
+    delete rootDirectoryFile;
 }
 
 /// Create a file in the Nachos file system (similar to UNIX `create`).
@@ -187,6 +185,7 @@ bool FileSystem::Create(const char *name)
 
     DEBUG('f', "Creating file %s\n", name);
 
+    directoryLock->Acquire();
     Directory *dir = new Directory(dirSize);
     dir->FetchFrom(directoryFile);
 
@@ -198,6 +197,7 @@ bool FileSystem::Create(const char *name)
     }
     else
     {
+        freeMapLock->Acquire();
         Bitmap *freeMap = new Bitmap(NUM_SECTORS);
         freeMap->FetchFrom(freeMapFile);
         int sector = freeMap->Find();
@@ -218,13 +218,16 @@ bool FileSystem::Create(const char *name)
             FileHeader *h = new FileHeader();
             h->WriteBack(sector);
             freeMap->WriteBack(freeMapFile);
+            DEBUG('f', "El freemap ESTA BIEN\n");
             dir->WriteBack(directoryFile);
             delete h;
             success = true;
         }
-
+        freeMapLock->Release();
         delete freeMap;
     }
+    DEBUG('f', "Archivo creado\n");
+    directoryLock->Release();
     delete dir;
     return success;
 }
@@ -235,6 +238,7 @@ bool FileSystem::CreateDirectory(const char *name)
 
     DEBUG('f', "Creating directory %s\n", name);
 
+    directoryLock->Acquire();
     Directory *dir = new Directory(dirSize);
     dir->FetchFrom(directoryFile);
 
@@ -246,6 +250,7 @@ bool FileSystem::CreateDirectory(const char *name)
     }
     else
     {
+        freeMapLock->Acquire();
         Bitmap *freeMap = new Bitmap(NUM_SECTORS);
         freeMap->FetchFrom(freeMapFile);
         int sector = freeMap->Find();
@@ -278,9 +283,10 @@ bool FileSystem::CreateDirectory(const char *name)
             delete newdir;
             success = true;
         }
-
+        freeMapLock->Release();
         delete freeMap;
     }
+    directoryLock->Release();
     delete dir;
     return success;
 }
@@ -297,14 +303,13 @@ FileSystem::Open(const char *name)
 {
     ASSERT(name != nullptr);
     OpenFileData *data;
+    OpenFile *openFile = nullptr;
     openFilesDataLock->Acquire();
     if (openFilesData->get(name, &data))
     {
         if (data->deleted)
         {
             DEBUG('f', "Quise abrir el archivo %s pero esta marcado para borrarse\n", name);
-            openFilesDataLock->Release();
-            return nullptr;
         }
         else
         {
@@ -313,14 +318,41 @@ FileSystem::Open(const char *name)
             data->numOpens++;
             data->file->AddSeekPosition(0);
             data->dataLock->Release();
-            openFilesDataLock->Release();
-            return data->file;
+            openFile = data->file;
+        }
+    }
+    else
+    {
+        directoryLock->Acquire();
+        Directory *dir = new Directory(dirSize);
+
+        DEBUG('f', "Opening file %s\n", name);
+        dir->FetchFrom(directoryFile);
+        int sector = dir->Find(name);
+        if (sector >= 0)
+        {
+            DEBUG('f', "File %s found in directory.\n", name);
+            openFile = new OpenFile(sector, name); // `name` was found in directory.
+        }
+        directoryLock->Release();
+        delete dir;
+        if (openFile != nullptr)
+        {
+            data = new OpenFileData(openFile);
+
+            openFilesData->insert(openFile->GetName(), data);
         }
     }
     openFilesDataLock->Release();
+    return openFile; // Return null if not found.
+}
 
-    Directory *dir = new Directory(dirSize);
+OpenFile *
+FileSystem::OpenDir(const char *name)
+{
+    ASSERT(name != nullptr);
     OpenFile *openFile = nullptr;
+    Directory *dir = new Directory(dirSize);
 
     DEBUG('f', "Opening file %s\n", name);
     dir->FetchFrom(directoryFile);
@@ -330,14 +362,6 @@ FileSystem::Open(const char *name)
         DEBUG('f', "File %s found in directory.\n", name);
         openFile = new OpenFile(sector, name); // `name` was found in directory.
     }
-    delete dir;
-    if (openFile != nullptr)
-    {
-        data = new OpenFileData(openFile);
-
-        openFilesData->insert(openFile->GetName(), data);
-    }
-
     return openFile; // Return null if not found.
 }
 
@@ -368,17 +392,20 @@ void FileSystem::Close(OpenFile *file)
 
 bool FileSystem::CleanFile(const char *name)
 {
+    directoryLock->Acquire();
     Directory *dir = new Directory(dirSize);
     dir->FetchFrom(directoryFile);
     int sector = dir->Find(name);
     if (sector == -1)
     {
         delete dir;
+        directoryLock->Release();
         return false; // file not found
     }
     FileHeader *fileH = new FileHeader;
     fileH->FetchFrom(sector);
 
+    freeMapLock->Acquire();
     Bitmap *freeMap = new Bitmap(NUM_SECTORS);
     freeMap->FetchFrom(freeMapFile);
 
@@ -389,6 +416,8 @@ bool FileSystem::CleanFile(const char *name)
     freeMap->WriteBack(freeMapFile); // Flush to disk.
     dir->WriteBack(directoryFile);   // Flush to disk.
     delete fileH;
+    freeMapLock->Release();
+    directoryLock->Release();
     delete dir;
     delete freeMap;
     return true;
@@ -416,23 +445,32 @@ bool FileSystem::Remove(const char *name)
         data->dataLock->Acquire();
         data->deleted = true;
         data->dataLock->Release();
-        openFilesDataLock->Acquire();
+        openFilesDataLock->Release();
         return true;
     }
     else
     {
-        openFilesDataLock->Acquire();
+        openFilesDataLock->Release(); // Lo libero en Clean File
         return CleanFile(name);
     }
 }
 
-bool FileSystem::Extend(FileHeader *hdr, unsigned size)
+bool FileSystem::Extend(FileHeader *hdr, unsigned size, bool isSys)
 {
+    ASSERT(!isSys || freeMapLock->IsHeldByCurrentThread()); // Asumimos que viene con el lock pedido
     DEBUG('f', "Extending file by %u bytes\n", size);
+    if (!isSys)
+    {
+        freeMapLock->Acquire();
+    }
     Bitmap *freeMap = new Bitmap(NUM_SECTORS);
     freeMap->FetchFrom(freeMapFile);
     bool res = hdr->ExtendFile(freeMap, size);
     freeMap->WriteBack(freeMapFile);
+    if (!isSys)
+    {
+        freeMapLock->Release();
+    }
     delete freeMap;
     return res;
 }
@@ -440,10 +478,13 @@ bool FileSystem::Extend(FileHeader *hdr, unsigned size)
 /// List all the files in the file system directory.
 void FileSystem::List()
 {
+    directoryLock->Acquire();
     Directory *dir = new Directory(dirSize);
 
     dir->FetchFrom(directoryFile);
     dir->List();
+
+    directoryLock->Release();
     delete dir;
 }
 
@@ -682,42 +723,33 @@ void FileSystem::Print()
 bool FileSystem::ChangeDirectory(const char *name)
 {
     DEBUG('f', "Changing directory to \"%s\".\n", name);
-    // Directory *dir = new Directory(dirSize);
-    // dir->FetchFrom(directoryFile);
 
     char path[strlen(name) + 1]; // Lo almacena en heap o en pila? Creemos que en pila, gracias GCC
     const char *rest = get_filepath(name, path);
 
-    OpenFile *newDir = Open(path);
+    OpenFile *newDir = OpenDir(path);
+    OpenFile *temp = directoryFile;
 
-    if (newDir)
+    bool result = newDir != nullptr;
+    while (strcmp(rest, "") != 0 && result)
     {
-        OpenFile *temp = directoryFile;
+        DEBUG('f', "Changing directory to \"%s\".\n", rest);
+        rest = get_filepath(rest, path);
+
         directoryFile = newDir;
-        if (strcmp(rest, "") == 0)
-        {
-            DEBUG('f', "Changed directory to \"%s\".\n", path);
-            Close(temp);
-            return true;
-        }
-        else
-        {
-            if (ChangeDirectory(rest))
-            {
-                Close(temp);
-                return true;
-            }
-            else
-            {
-                Close(newDir);
-                directoryFile = temp;
-                return false;
-            }
-        }
+        newDir = OpenDir(path);
+        result = newDir != nullptr;
+    }
+
+    if (result)
+    {
+        directoryFile = newDir;
+        DEBUG('f', "Changed directory to \"%s\".\n", name);
     }
     else
     {
-        DEBUG('f', "Directory \"%s\" not found.\n", path);
-        return false;
+        directoryFile = temp;
+        DEBUG('f', "Could not change directory to \"%s\".\n", name);
     }
+    return result;
 }

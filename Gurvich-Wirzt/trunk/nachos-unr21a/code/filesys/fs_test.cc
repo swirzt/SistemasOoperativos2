@@ -189,3 +189,56 @@ void PerformanceTest()
     }
     stats->Print();
 }
+
+static const char CONTENTS_SYNC[] = "Escribo!";
+static const unsigned CONTENT_SIZE_SYNC = sizeof CONTENTS_SYNC - 1;
+
+static void Escribo(void *n_)
+{
+    OpenFile *openFile = fileSystem->Open("test");
+    char *escribir = new char[16];
+    sprintf(escribir, "Soy el numero %u", *((unsigned *)n_));
+    DEBUG('f', "Escribiendo %s\n", escribir);
+    int len = strlen(escribir);
+    openFile->WriteAt(escribir, len, *((unsigned *)n_) * len);
+    printf("Soy %u y ya termine de escribir de largo %d\n", *((unsigned *)n_), len);
+    fileSystem->Close(openFile);
+    printf("Soy %u y ya cerre el archivo \n", *((unsigned *)n_));
+}
+
+void ConcurrentFSTest()
+{
+    const int CANT_THREADS = 3;
+    List<Thread *> *listaHijos = new List<Thread *>;
+    // Launch a new thread for each turnstile.
+    fileSystem->Create("test");
+    for (unsigned i = 0; i < CANT_THREADS; i++)
+    {
+        printf("Iniciando hilos para escribir %u.\n", i);
+        char *name = new char[16];
+        sprintf(name, "Escritor %u", i);
+        unsigned *n = new unsigned;
+        *n = i;
+        DEBUG('t', "Empezando fork %ld\n", i);
+        Thread *t = new Thread(name, true, 0);
+
+        t->Fork(Escribo, (void *)n);
+        listaHijos->Append(t);
+    }
+
+    for (int i = 0; i < activeThreads->getSize(); i++)
+    {
+        // Print element of activeThreads
+        Thread *temp = activeThreads->Get(i);
+        DEBUG('t', "Threaasdasdd %s %p \n", temp->GetName(), temp);
+    }
+
+    while (!listaHijos->IsEmpty())
+    {
+        Thread *t = listaHijos->Pop();
+        DEBUG('t', "Voy a joinear el hilo %s\n", t->GetName());
+        t->Join();
+    }
+
+    return;
+}

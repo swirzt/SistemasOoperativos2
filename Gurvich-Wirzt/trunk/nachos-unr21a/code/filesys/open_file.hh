@@ -112,6 +112,9 @@ public:
     int ReadAt(char *into, unsigned numBytes, unsigned position);
     int WriteAt(const char *from, unsigned numBytes, unsigned position);
 
+    int ReadSys(char *into, unsigned numBytes, unsigned position, bool isSys);
+    int WriteSys(const char *from, unsigned numBytes, unsigned position, bool isSys);
+
     // Return the number of bytes in the file (this interface is simpler than
     // the UNIX idiom -- `lseek` to end of file, `tell`, `lseek` back).
     unsigned Length() const;

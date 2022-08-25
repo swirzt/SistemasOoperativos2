@@ -119,7 +119,11 @@ void Bitmap::Print() const
 void Bitmap::FetchFrom(OpenFile *file)
 {
     ASSERT(file != nullptr);
+#ifndef FILESYS_STUB
+    file->ReadSys((char *)map, numWords * sizeof(unsigned), 0, true);
+#else
     file->ReadAt((char *)map, numWords * sizeof(unsigned), 0);
+#endif
 }
 
 /// Store the contents of a bitmap to a Nachos file.
@@ -130,5 +134,9 @@ void Bitmap::FetchFrom(OpenFile *file)
 void Bitmap::WriteBack(OpenFile *file) const
 {
     ASSERT(file != nullptr);
+#ifndef FILESYS_STUB
+    file->WriteSys((char *)map, numWords * sizeof(unsigned), 0, true);
+#else
     file->WriteAt((char *)map, numWords * sizeof(unsigned), 0);
+#endif
 }

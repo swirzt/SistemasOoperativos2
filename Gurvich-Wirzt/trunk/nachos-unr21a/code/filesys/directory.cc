@@ -88,20 +88,16 @@ void Directory::FetchFrom(OpenFile *file)
 {
     ASSERT(file != nullptr);
     unsigned size;
-    file->ReadAt((char *)&size, sizeof(size), 0);
+    file->ReadSys((char *)&size, sizeof(size), 0, true);
     raw.table = new DirectoryEntry[size];
     raw.tableSize = size;
 #ifdef FILESYS
     fileSystem->setDirSize(size);
 #endif
-    // file->ReadAt((char *)&raw.hasParent, sizeof(raw.hasParent), sizeof(size));
-    // if (raw.hasParent)
-    // {
-    file->ReadAt((char *)&raw.parentSector, sizeof(raw.parentSector),
-                 sizeof(size));
-    // }
-    file->ReadAt((char *)raw.table,
-                 raw.tableSize * sizeof(DirectoryEntry), sizeof(DirectoryEntry));
+    file->ReadSys((char *)&raw.parentSector, sizeof(raw.parentSector),
+                  sizeof(size), true);
+    file->ReadSys((char *)raw.table,
+                  raw.tableSize * sizeof(DirectoryEntry), sizeof(DirectoryEntry), true);
 }
 
 /// Write any modifications to the directory back to disk.
@@ -110,15 +106,11 @@ void Directory::FetchFrom(OpenFile *file)
 void Directory::WriteBack(OpenFile *file)
 {
     ASSERT(file != nullptr);
-    file->WriteAt((char *)&raw.tableSize, sizeof(raw.tableSize), 0);
-    // file->WriteAt((char *)&raw.hasParent, sizeof(raw.hasParent), sizeof(raw.tableSize));
-    // if (raw.hasParent)
-    // {
-    file->WriteAt((char *)&raw.parentSector, sizeof(raw.parentSector),
-                  sizeof(raw.tableSize));
-    // }
-    file->WriteAt((char *)raw.table,
-                  raw.tableSize * sizeof(DirectoryEntry), sizeof(DirectoryEntry));
+    file->WriteSys((char *)&raw.tableSize, sizeof(raw.tableSize), 0, true);
+    file->WriteSys((char *)&raw.parentSector, sizeof(raw.parentSector),
+                   sizeof(raw.tableSize), true);
+    file->WriteSys((char *)raw.table,
+                   raw.tableSize * sizeof(DirectoryEntry), sizeof(DirectoryEntry), true);
 }
 
 /// Look up file name in directory, and return its location in the table of
@@ -184,7 +176,7 @@ bool Directory::Add(const char *name, int newSector, bool isDir)
         }
     }
 
-    DEBUG('f', "No hay hueco en el directorio, lo estiro");
+    DEBUG('f', "No hay hueco en el directorio, lo estiro\n");
     DirectoryEntry *newTable = new DirectoryEntry[raw.tableSize + NUM_DIR_ENTRYS_SECTOR];
     // copy the memory data in the new table with memcpy
     memcpy(newTable, raw.table, raw.tableSize * sizeof(DirectoryEntry));

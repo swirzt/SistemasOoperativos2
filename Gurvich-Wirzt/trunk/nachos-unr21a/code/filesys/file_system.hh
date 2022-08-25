@@ -128,13 +128,16 @@ public:
     /// Open a file (UNIX `open`).
     OpenFile *Open(const char *name);
 
+    /// Open a directory (UNIX `open`).
+    OpenFile *OpenDir(const char *name);
+
     void Close(OpenFile *openFile);
 
     /// Delete a file (UNIX `unlink`).
     bool Remove(const char *name);
 
     /// Extend a file size (UNIX `truncate`).
-    bool Extend(FileHeader *hdr, unsigned size);
+    bool Extend(FileHeader *hdr, unsigned size, bool isSys);
 
     /// List all the files in the file system.
     void List();

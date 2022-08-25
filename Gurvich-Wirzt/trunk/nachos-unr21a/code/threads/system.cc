@@ -53,6 +53,8 @@ FileSystem *fileSystem;
 SynchDisk *synchDisk;
 OpenFilesList *openFilesData;
 Lock *openFilesDataLock;
+Lock *directoryLock; ///< Lock for directory operations.
+Lock *freeMapLock;   ///< Lock for free map operations.
 #endif
 
 #ifdef USER_PROGRAM // Requires either *FILESYS* or *FILESYS_STUB*.
@@ -292,6 +294,8 @@ void Initialize(int argc, char **argv)
     synchDisk = new SynchDisk("DISK");
     openFilesData = new OpenFilesList(strcomp);
     openFilesDataLock = new Lock("openFilesDataLock");
+    directoryLock = new Lock("directoryLock");
+    freeMapLock = new Lock("freeMapLock");
 #endif
 
 #ifdef FILESYS_NEEDED
@@ -331,6 +335,8 @@ void Cleanup()
     delete synchDisk;
     delete openFilesData;
     delete openFilesDataLock;
+    delete freeMapLock;
+    delete directoryLock;
 #endif
 
     delete timer;
