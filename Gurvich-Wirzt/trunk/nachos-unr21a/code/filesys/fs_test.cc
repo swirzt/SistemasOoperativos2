@@ -239,6 +239,6 @@ void ConcurrentFSTest()
         DEBUG('t', "Voy a joinear el hilo %s\n", t->GetName());
         t->Join();
     }
-
+    interrupt->Halt();
     return;
 }

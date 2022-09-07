@@ -271,15 +271,12 @@ bool FileSystem::CreateDirectory(const char *name)
             FileHeader *h = new FileHeader();
             h->WriteBack(sector);
             OpenFile *newdirFile = new OpenFile(sector, h, name);
-            OpenFileData *temp = new OpenFileData(newdirFile);
-            openFilesData->insert(name, temp);
             Directory *newdir = new Directory(NUM_DIR_ENTRIES, directoryFile->GetSector(), sector);
             freeMap->WriteBack(freeMapFile);
             newdir->WriteBack(newdirFile);
-            openFilesData->remove(name);
             dir->WriteBack(directoryFile);
 
-            delete temp; // En su destruccion se hace delete de newDirFIle y h
+            delete newdirFile;
             delete newdir;
             success = true;
         }
@@ -301,49 +298,49 @@ bool FileSystem::CreateDirectory(const char *name)
 OpenFile *
 FileSystem::Open(const char *name)
 {
+    // asociar archivo a su sector
     ASSERT(name != nullptr);
-    OpenFileData *data;
     OpenFile *openFile = nullptr;
-    openFilesDataLock->Acquire();
-    if (openFilesData->get(name, &data))
+
+    DEBUG('f', "Opening file %s\n", name);
+    directoryLock->Acquire();
+    Directory *dir = new Directory(dirSize);
+    dir->FetchFrom(directoryFile);
+    int sector = dir->Find(name);
+    directoryLock->Release();
+    delete dir;
+
+    if (sector >= 0)
     {
-        if (data->deleted)
+        DEBUG('f', "File %s found in directory.\n", name);
+        OpenFileData *data;
+        openFilesDataLock->Acquire();
+        if (openFilesData->get(sector, &data))
         {
-            DEBUG('f', "Quise abrir el archivo %s pero esta marcado para borrarse\n", name);
+            if (data->deleted)
+            {
+                DEBUG('f', "Quise abrir el archivo %s pero esta marcado para borrarse\n", name);
+            }
+            else
+            {
+                DEBUG('f', "Abriendo el archivo %s ya abierto por otro hilo\n", name);
+                data->dataLock->Acquire();
+                data->numOpens++;
+                data->file->AddSeekPosition(0);
+                data->dataLock->Release();
+                openFile = data->file;
+            }
         }
         else
         {
-            DEBUG('f', "Abriendo el archivo %s ya abierto por otro hilo\n", name);
-            data->dataLock->Acquire();
-            data->numOpens++;
-            data->file->AddSeekPosition(0);
-            data->dataLock->Release();
-            openFile = data->file;
-        }
-    }
-    else
-    {
-        directoryLock->Acquire();
-        Directory *dir = new Directory(dirSize);
-
-        DEBUG('f', "Opening file %s\n", name);
-        dir->FetchFrom(directoryFile);
-        int sector = dir->Find(name);
-        if (sector >= 0)
-        {
-            DEBUG('f', "File %s found in directory.\n", name);
             openFile = new OpenFile(sector, name); // `name` was found in directory.
-        }
-        directoryLock->Release();
-        delete dir;
-        if (openFile != nullptr)
-        {
             data = new OpenFileData(openFile);
 
-            openFilesData->insert(openFile->GetName(), data);
+            openFilesData->insert(sector, data);
         }
+        openFilesDataLock->Release();
     }
-    openFilesDataLock->Release();
+
     return openFile; // Return null if not found.
 }
 
@@ -368,10 +365,11 @@ FileSystem::OpenDir(const char *name)
 void FileSystem::Close(OpenFile *file)
 {
     const char *name = file->GetName();
+    const int sector = file->GetSector();
 
     OpenFileData *data;
     openFilesDataLock->Acquire();
-    openFilesData->get(name, &data);
+    openFilesData->get(sector, &data);
 
     data->dataLock->Acquire();
     data->numOpens--;
@@ -383,7 +381,7 @@ void FileSystem::Close(OpenFile *file)
     else
     {
         DEBUG('f', "Soy el ultimo que lee en %s\n", name);
-        openFilesData->remove(name);
+        openFilesData->remove(sector);
         data->dataLock->Release();
         delete data;
     }
@@ -438,9 +436,17 @@ bool FileSystem::CleanFile(const char *name)
 bool FileSystem::Remove(const char *name)
 {
     ASSERT(name != nullptr);
+
+    directoryLock->Acquire();
+    Directory *dir = new Directory(dirSize);
+    dir->FetchFrom(directoryFile);
+    int sector = dir->Find(name);
+    directoryLock->Release();
+    delete dir;
+
     OpenFileData *data;
     openFilesDataLock->Acquire();
-    if (openFilesData->get(name, &data))
+    if (openFilesData->get(sector, &data))
     {
         data->dataLock->Acquire();
         data->deleted = true;

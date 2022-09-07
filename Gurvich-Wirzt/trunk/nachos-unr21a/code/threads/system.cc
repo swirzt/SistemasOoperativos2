@@ -292,7 +292,7 @@ void Initialize(int argc, char **argv)
 
 #ifdef FILESYS
     synchDisk = new SynchDisk("DISK");
-    openFilesData = new OpenFilesList(strcomp);
+    openFilesData = new OpenFilesList(intcomp);
     openFilesDataLock = new Lock("openFilesDataLock");
     directoryLock = new Lock("directoryLock");
     freeMapLock = new Lock("freeMapLock");

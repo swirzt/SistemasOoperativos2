@@ -159,7 +159,7 @@ int OpenFile::ReadSys(char *into, unsigned numBytes, unsigned position, bool isS
     if (!isSys)
     {
         openFilesDataLock->Acquire();
-        ASSERT(openFilesData->get(this->filename, &sdata));
+        ASSERT(openFilesData->get(this->hdrSector, &sdata));
         openFilesDataLock->Release();
 
         // Algoritmo para empezar a leer ----
@@ -255,7 +255,7 @@ int OpenFile::WriteSys(const char *from, unsigned numBytes, unsigned position, b
     if (!isSys)
     {
         openFilesDataLock->Acquire();
-        ASSERT(openFilesData->get(this->filename, &sdata));
+        ASSERT(openFilesData->get(this->hdrSector, &sdata));
         openFilesDataLock->Release();
 
         // Algoritmo para empezar a escribir ----

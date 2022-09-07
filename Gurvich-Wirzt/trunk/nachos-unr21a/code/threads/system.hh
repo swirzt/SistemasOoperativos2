@@ -63,7 +63,7 @@ extern SynchDisk *synchDisk;
 #include "threads/condition.hh"
 #include "lib/list.hh"
 #include "filesys/open_file_data.hh"
-typedef LinkedList<const char *, OpenFileData *> OpenFilesList;
+typedef LinkedList<int, OpenFileData *> OpenFilesList;
 extern OpenFilesList *openFilesData;
 extern Lock *openFilesDataLock;
 extern Lock *directoryLock; ///< Lock for directory operations.
