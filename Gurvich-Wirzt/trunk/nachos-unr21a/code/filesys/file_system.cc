@@ -183,7 +183,8 @@ Lock *getDirLock(OpenFile *directoryFile)
 ///
 /// * `name` is the name of file to be created.
 /// * `initialSize` is the size of file to be created.
-bool FileSystem::Create(const char *name)
+
+bool FileSystem::CreateBoth(const char *name, bool isDir)
 {
     ASSERT(name != nullptr);
 
@@ -217,12 +218,23 @@ bool FileSystem::Create(const char *name)
         }
         else
         {
-            dir->Add(name, sector, false);
+            dir->Add(name, sector, isDir);
             DEBUG('f', "Sector allocated for file header in %d.\n", sector);
             FileHeader *h = new FileHeader();
             h->WriteBack(sector);
+
+            if (isDir)
+            {
+                OpenFile *newdirFile = new OpenFile(sector, h, name);
+                Directory *newdir = new Directory(NUM_DIR_ENTRIES, directoryFile->GetSector(), sector);
+                newdir->WriteBack(newdirFile);
+                delete newdirFile; // delete h adentro
+                delete newdir;
+            }
+            else
+                delete h;
+
             dir->WriteBack(directoryFile);
-            delete h;
             success = true;
         }
         delete freeMap;
@@ -233,59 +245,14 @@ bool FileSystem::Create(const char *name)
     return success;
 }
 
+bool FileSystem::Create(const char *name)
+{
+    return CreateBoth(name, false);
+}
+
 bool FileSystem::CreateDirectory(const char *name)
 {
-    ASSERT(name != nullptr);
-
-    DEBUG('f', "Creating directory %s\n", name);
-    OpenFile *directoryFile = currentThread->GetCurrentDirectory();
-    Lock *dirlock = getDirLock(directoryFile);
-
-    Directory *dir = new Directory();
-    dir->FetchFrom(directoryFile);
-
-    bool success;
-    if (dir->Find(name) != -1)
-    {
-        success = false; // File is already in directory.
-    }
-    else
-    {
-        Bitmap *freeMap = new Bitmap(NUM_SECTORS);
-        freeMapLock->Acquire();
-        freeMap->FetchFrom(freeMapFile);
-        int sector = freeMap->Find();
-        if (sector != -1)
-            freeMap->WriteBack(freeMapFile);
-        freeMapLock->Release();
-
-        // Find a sector to hold the file header.
-        if (sector == -1)
-        {
-            DEBUG('f', "No free space for file header.\n");
-            success = false; // No free block for file header.
-        }
-        else
-        {
-            dir->Add(name, sector, true);
-            DEBUG('f', "Sector allocated for file header in %d.\n", sector);
-            FileHeader *h = new FileHeader();
-            h->WriteBack(sector);
-            OpenFile *newdirFile = new OpenFile(sector, h, name);
-            Directory *newdir = new Directory(NUM_DIR_ENTRIES, directoryFile->GetSector(), sector);
-            newdir->WriteBack(newdirFile);
-            dir->WriteBack(directoryFile);
-
-            delete newdirFile; // delete h adentro
-            delete newdir;
-            success = true;
-        }
-        delete freeMap;
-    }
-    DEBUG('f', "Directorio creado\n");
-    dirlock->Release();
-    delete dir;
-    return success;
+    return CreateBoth(name, true);
 }
 
 /// Open a file for reading and writing.
@@ -362,6 +329,16 @@ FileSystem::OpenDir(const char *name)
     {
         DEBUG('f', "File %s found in directory.\n", name);
         openFile = new OpenFile(sector, name); // `name` was found in directory.
+        if (openSysList->exists(sector))
+        {
+            DEBUG('f', "El directorio %s ya está en la lista\n", name);
+        }
+        else
+        {
+            DEBUG('f', "Agregando el lock de directorio %s a la lista\n", name);
+            dirlock = new Lock("dirlock");
+            openSysList->insert(sector, dirlock);
+        }
     }
     return openFile; // Return null if not found.
 }
@@ -729,13 +706,22 @@ void FileSystem::Print()
 bool FileSystem::ChangeDirectory(const char *name)
 {
     DEBUG('f', "Changing directory to \"%s\".\n", name);
-    OpenFile *directoryFile = currentThread->GetCurrentDirectory();
+    if (name == nullptr)
+    {
+        DEBUG('f', "Invalid name.\n");
+        return false;
+    }
+    OpenFile *temp = currentThread->GetCurrentDirectory(); // Guardo el directorio actual por si hay algun problema
+
+    if (name[0] == '/')
+    {
+        currentThread->SetCurrentDirectory(rootDirectoryFile);
+        name++;
+    }
 
     char path[strlen(name) + 1]; // Lo almacena en heap o en pila? Creemos que en pila, gracias GCC
     const char *rest = get_filepath(name, path);
-
-    OpenFile *newDir = Open(path);
-    OpenFile *temp = directoryFile;
+    OpenFile *newDir = OpenDir(path);
 
     bool result = newDir != nullptr;
     while (strcmp(rest, "") != 0 && result)
@@ -743,20 +729,28 @@ bool FileSystem::ChangeDirectory(const char *name)
         DEBUG('f', "Changing directory to \"%s\".\n", rest);
         rest = get_filepath(rest, path);
 
-        directoryFile = newDir;
-        newDir = Open(path);
+        OpenFile *before = currentThread->GetCurrentDirectory();
+        if (before != rootDirectoryFile && before != temp)
+            delete before;
+
+        currentThread->SetCurrentDirectory(newDir);
+        newDir = OpenDir(path);
         result = newDir != nullptr;
     }
 
     if (result)
     {
-        directoryFile = newDir;
+        currentThread->SetCurrentDirectory(newDir);
         DEBUG('f', "Changed directory to \"%s\".\n", name);
+        if (temp != rootDirectoryFile && temp != nullptr)
+            delete temp;
     }
     else
     {
-        directoryFile = temp;
+        currentThread->SetCurrentDirectory(temp);
         DEBUG('f', "Could not change directory to \"%s\".\n", name);
+        if (newDir != nullptr)
+            delete newDir;
     }
     return result;
 }

@@ -163,6 +163,7 @@ private:
 
     /// Remove a file from the filesystem.
     bool CleanFile(const char *name);
+    bool CreateBoth(const char *name, bool isDir);
 };
 
 #endif

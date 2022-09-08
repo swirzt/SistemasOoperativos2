@@ -398,5 +398,10 @@ OpenFile *Thread::GetCurrentDirectory()
         return fileSystem->rootDirectoryFile;
     return currentDirectory;
 }
+
+void Thread::SetCurrentDirectory(OpenFile *dir)
+{
+    currentDirectory = dir;
+}
 #endif
 #endif

@@ -204,6 +204,7 @@ private:
 
 public:
     OpenFile *GetCurrentDirectory();
+    void SetCurrentDirectory(OpenFile *directory);
 #endif
 #endif
 };

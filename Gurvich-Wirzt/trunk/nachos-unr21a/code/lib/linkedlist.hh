@@ -33,6 +33,7 @@ public:
     void insert(Key key, Value value);
     void remove(Key key);
     bool get(Key key, Value *value);
+    bool exists(Key key);
     void update(Key key, Value value);
     void print();
 
@@ -103,6 +104,21 @@ bool LinkedList<Key, Value>::get(Key key, Value *val)
         if (f(current->key, key))
         {
             *val = current->value;
+            return true;
+        }
+        current = current->next;
+    }
+    return false;
+}
+
+template <class Key, class Value>
+bool LinkedList<Key, Value>::exists(Key key)
+{
+    Node<Key, Value> *current = head;
+    while (current != nullptr)
+    {
+        if (f(current->key, key))
+        {
             return true;
         }
         current = current->next;
