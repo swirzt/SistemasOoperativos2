@@ -20,7 +20,6 @@ public:
     Lock *lock;
     Condition *condition;
     bool deleted;
-    Lock *dataLock;
 };
 
 #endif

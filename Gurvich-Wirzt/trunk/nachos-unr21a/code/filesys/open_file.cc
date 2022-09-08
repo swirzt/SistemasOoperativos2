@@ -128,10 +128,10 @@ int OpenFile::Write(const char *into, unsigned numBytes)
 
 int OpenFile::ReadAt(char *into, unsigned numBytes, unsigned position)
 {
-    return ReadSys(into, numBytes, position, false);
+    return ReadAt(into, numBytes, position, false);
 }
 
-int OpenFile::ReadSys(char *into, unsigned numBytes, unsigned position, bool isSys)
+int OpenFile::ReadAt(char *into, unsigned numBytes, unsigned position, bool isSys)
 {
     ASSERT(into != nullptr);
     ASSERT(numBytes > 0);
@@ -199,10 +199,10 @@ int OpenFile::ReadSys(char *into, unsigned numBytes, unsigned position, bool isS
 
 int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position)
 {
-    return WriteSys(from, numBytes, position, false);
+    return WriteAt(from, numBytes, position, false);
 }
 
-int OpenFile::WriteSys(const char *from, unsigned numBytes, unsigned position, bool isSys)
+int OpenFile::WriteAt(const char *from, unsigned numBytes, unsigned position, bool isSys)
 {
     ASSERT(from != nullptr);
     ASSERT(numBytes > 0);
@@ -217,7 +217,7 @@ int OpenFile::WriteSys(const char *from, unsigned numBytes, unsigned position, b
     {
         DEBUG('f', "Me pase de largo, voy a agrandar el archivo %s, su tamaño actual es %u\n", filename, fileLength);
         unsigned left = position + numBytes - fileLength;
-        if (!fileSystem->Extend(hdr, left, isSys))
+        if (!fileSystem->Extend(hdr, left))
         {
             return 0; // Could not write
         }
@@ -240,12 +240,12 @@ int OpenFile::WriteSys(const char *from, unsigned numBytes, unsigned position, b
     // Read in first and last sector, if they are to be partially modified.
     if (!firstAligned)
     {
-        ReadSys(buf, SECTOR_SIZE, firstSector * SECTOR_SIZE, isSys);
+        ReadAt(buf, SECTOR_SIZE, firstSector * SECTOR_SIZE, isSys);
     }
     if (!lastAligned && (firstSector != lastSector || firstAligned))
     {
-        ReadSys(&buf[(lastSector - firstSector) * SECTOR_SIZE],
-                SECTOR_SIZE, lastSector * SECTOR_SIZE, isSys);
+        ReadAt(&buf[(lastSector - firstSector) * SECTOR_SIZE],
+               SECTOR_SIZE, lastSector * SECTOR_SIZE, isSys);
     }
 
     // Copy in the bytes we want to change.

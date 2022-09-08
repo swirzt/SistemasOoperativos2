@@ -137,7 +137,8 @@ public:
     bool Remove(const char *name);
 
     /// Extend a file size (UNIX `truncate`).
-    bool Extend(FileHeader *hdr, unsigned size, bool isSys);
+    // bool Extend(FileHeader *hdr, unsigned size, bool isSys);
+    bool Extend(FileHeader *hdr, unsigned size);
 
     /// List all the files in the file system.
     void List();
@@ -148,25 +149,20 @@ public:
     /// List all the files and their contents.
     void Print();
 
-    unsigned getDirSize();
-
-    void setDirSize(unsigned size);
-
     bool CreateDirectory(const char *name);
 
     bool ChangeDirectory(const char *name);
 
-private:
-    OpenFile *freeMapFile;       ///< Bit map of free disk blocks, represented as a
-                                 ///< file.
-    OpenFile *directoryFile;     ///< “Root” directory -- list of file names,
-                                 ///< represented as a file.
     OpenFile *rootDirectoryFile; ///< Root directory file. En teoria este solo lo vamos a usar para buscar (Por ahora)
+
+private:
+    OpenFile *freeMapFile; ///< Bit map of free disk blocks, represented as a
+                           ///< file.
+    // OpenFile *directoryFile; ///< “Root” directory -- list of file names,
+    //                          ///< represented as a file.
 
     /// Remove a file from the filesystem.
     bool CleanFile(const char *name);
-
-    unsigned dirSize;
 };
 
 #endif

@@ -13,7 +13,6 @@ OpenFileData::OpenFileData(OpenFile *fil)
     lock = new Lock(fil->GetName());
     condition = new Condition(fil->GetName(), lock);
     deleted = false;
-    dataLock = new Lock(fil->GetName());
 }
 
 OpenFileData::~OpenFileData()
@@ -28,5 +27,4 @@ OpenFileData::~OpenFileData()
     delete file;
     delete lock;
     delete condition;
-    delete dataLock;
 }

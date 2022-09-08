@@ -197,7 +197,14 @@ public:
 
     // PID of this thread
     int pid;
+#ifndef FILESYS_STUB
+    // Current directory of this thread
+private:
+    OpenFile *currentDirectory;
 
+public:
+    OpenFile *GetCurrentDirectory();
+#endif
 #endif
 };
 

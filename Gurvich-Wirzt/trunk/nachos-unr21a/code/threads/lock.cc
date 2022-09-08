@@ -43,6 +43,7 @@ Lock::GetName() const
 
 void Lock::Acquire()
 {
+    DEBUG('s', "Soy lock %s y me solicitaron\n", name);
     ASSERT(!IsHeldByCurrentThread());
     int prio = currentThread->GetPrio();
     if (holder != nullptr && holder->GetPrio() < prio)
@@ -57,6 +58,7 @@ void Lock::Acquire()
 
 void Lock::Release()
 {
+    DEBUG('s', "Soy lock %s y me soltaron\n", name);
     ASSERT(IsHeldByCurrentThread());
     currentThread->SetPrio(holderPriority);
     scheduler->UpdatePriority(currentThread);

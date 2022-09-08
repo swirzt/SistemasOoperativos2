@@ -66,8 +66,10 @@ extern SynchDisk *synchDisk;
 typedef LinkedList<int, OpenFileData *> OpenFilesList;
 extern OpenFilesList *openFilesData;
 extern Lock *openFilesDataLock;
-extern Lock *directoryLock; ///< Lock for directory operations.
-extern Lock *freeMapLock;   ///< Lock for free map operations.
+typedef LinkedList<int, Lock *> OpenSysList;
+extern OpenSysList *openSysList;
+extern Lock *openSysLock;
+extern Lock *freeMapLock;
 
 #endif
 

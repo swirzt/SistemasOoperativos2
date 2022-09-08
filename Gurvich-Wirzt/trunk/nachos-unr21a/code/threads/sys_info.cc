@@ -10,10 +10,6 @@
 
 void SysInfo()
 {
-      unsigned dirsize = NUM_DIR_ENTRIES;
-#ifdef FILESYS
-      dirsize = fileSystem->getDirSize();
-#endif
       (void)COPYRIGHT; // Prevent warning about unused variable.
 
       const char *OPTIONS =
@@ -73,8 +69,8 @@ Filesystem:\n\
   Maximum file size: %u bytes.\n\
   File name maximum length: %u.\n\
   Free sectors map size: %u bytes.\n\
-  Maximum number of dir-entries: %u.\n\
+  Maximum number of dir-entries: NaN.\n\
   Directory file size: %u bytes.\n",
              NUM_DIRECT, MAX_FILE_SIZE, FILE_NAME_MAX_LEN,
-             FREE_MAP_FILE_SIZE, dirsize, DIRECTORY_FILE_SIZE);
+             FREE_MAP_FILE_SIZE, DIRECTORY_FILE_SIZE);
 }

@@ -35,19 +35,7 @@
 /// otherwise, we need to call FetchFrom in order to initialize it from disk.
 ///
 /// * `size` is the number of entries in the directory.
-Directory::Directory(unsigned size)
-{
-    ASSERT(size > 0);
-    raw.tableSize = size;
-    // if (init)
-    // {
-    //     raw.table = new DirectoryEntry[size];
-    //     for (unsigned i = 0; i < raw.tableSize; i++)
-    //     {
-    //         raw.table[i].inUse = false;
-    //     }
-    // }
-}
+Directory::Directory() { DEBUG('f', "Creando un Directory vacío\n"); }
 
 // Crear nuevos directorios con un sector padre y un sector actual.
 Directory::Directory(unsigned size, unsigned parentSector, unsigned currentSector)
@@ -88,16 +76,20 @@ void Directory::FetchFrom(OpenFile *file)
 {
     ASSERT(file != nullptr);
     unsigned size;
-    file->ReadSys((char *)&size, sizeof(size), 0, true);
+    file->ReadAt((char *)&size,
+                 sizeof(size),
+                 0, true);
+
     raw.table = new DirectoryEntry[size];
     raw.tableSize = size;
-#ifdef FILESYS
-    fileSystem->setDirSize(size);
-#endif
-    file->ReadSys((char *)&raw.parentSector, sizeof(raw.parentSector),
-                  sizeof(size), true);
-    file->ReadSys((char *)raw.table,
-                  raw.tableSize * sizeof(DirectoryEntry), sizeof(DirectoryEntry), true);
+
+    file->ReadAt((char *)&raw.parentSector,
+                 sizeof(raw.parentSector),
+                 sizeof(size), true);
+
+    file->ReadAt((char *)raw.table,
+                 raw.tableSize * sizeof(DirectoryEntry),
+                 sizeof(DirectoryEntry), true);
 }
 
 /// Write any modifications to the directory back to disk.
@@ -106,11 +98,17 @@ void Directory::FetchFrom(OpenFile *file)
 void Directory::WriteBack(OpenFile *file)
 {
     ASSERT(file != nullptr);
-    file->WriteSys((char *)&raw.tableSize, sizeof(raw.tableSize), 0, true);
-    file->WriteSys((char *)&raw.parentSector, sizeof(raw.parentSector),
-                   sizeof(raw.tableSize), true);
-    file->WriteSys((char *)raw.table,
-                   raw.tableSize * sizeof(DirectoryEntry), sizeof(DirectoryEntry), true);
+    file->WriteAt((char *)&raw.tableSize,
+                  sizeof(raw.tableSize),
+                  0, true);
+
+    file->WriteAt((char *)&raw.parentSector,
+                  sizeof(raw.parentSector),
+                  sizeof(raw.tableSize), true);
+
+    file->WriteAt((char *)raw.table,
+                  raw.tableSize * sizeof(DirectoryEntry),
+                  sizeof(DirectoryEntry), true);
 }
 
 /// Look up file name in directory, and return its location in the table of
@@ -187,9 +185,6 @@ bool Directory::Add(const char *name, int newSector, bool isDir)
     raw.table[raw.tableSize].sector = newSector;
     raw.table[raw.tableSize].isDir = isDir;
     raw.tableSize += NUM_DIR_ENTRYS_SECTOR;
-#ifdef FILESYS
-    fileSystem->setDirSize(raw.tableSize);
-#endif
     return true;
 }
 

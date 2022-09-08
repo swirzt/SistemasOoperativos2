@@ -55,7 +55,9 @@ Thread::Thread(const char *threadName, bool join, int priority)
     openFiles->Add(nullptr);
     openFiles->Add(nullptr);
     pid = activeThreads->Add(this);
-
+#ifndef FILESYS_STUB
+    currentDirectory = nullptr;
+#endif
 #endif
 }
 
@@ -85,8 +87,10 @@ Thread::~Thread()
     delete openFiles;
     delete space;
     activeThreads->Remove(pid);
-// Si queremos que no haga ASumming y Halt
-// Preguntar cuantos threads quedan y hacer Halt
+#ifndef FILESYS_STUB
+    if (currentDirectory != nullptr)
+        delete currentDirectory;
+#endif
 #endif
 }
 
@@ -109,6 +113,11 @@ Thread::~Thread()
 void Thread::Fork(VoidFunctionPtr func, void *arg)
 {
     ASSERT(func != nullptr);
+#ifdef USER_PROGRAM
+#ifndef FILESYS_STUB
+    currentDirectory = new OpenFile(currentThread->GetCurrentDirectory()->GetSector(), "Directory");
+#endif
+#endif
 
     DEBUG('t', "Forking thread \"%s\" with func = %p, arg = %p\n",
           name, func, arg);
@@ -382,4 +391,12 @@ void Thread::RestoreUserState()
     }
 }
 
+#ifndef FILESYS_STUB
+OpenFile *Thread::GetCurrentDirectory()
+{
+    if (currentDirectory == nullptr)
+        return fileSystem->rootDirectoryFile;
+    return currentDirectory;
+}
+#endif
 #endif
