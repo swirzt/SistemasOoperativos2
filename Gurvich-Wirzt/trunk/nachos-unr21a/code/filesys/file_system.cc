@@ -274,10 +274,22 @@ FileSystem::Open(const char *name)
     Lock *dirlock = getDirLock(directoryFile);
     dir->FetchFrom(directoryFile);
     int sector = dir->Find(name);
+    bool isDir = false;
+    if (sector >= 0)
+    {
+        isDir = dir->IsDir(name);
+    }
     dirlock->Release();
     delete dir;
 
     OpenFile *openFile = nullptr;
+
+    if (isDir)
+    {
+        DEBUG('f', "Tried to open directory %s as a file\n", name);
+        return openFile;
+    }
+
     if (sector >= 0)
     {
         DEBUG('f', "File %s found in directory.\n", name);
@@ -322,9 +334,21 @@ FileSystem::OpenDir(const char *name)
     dir->FetchFrom(directoryFile);
     int sector = dir->Find(name);
     dirlock->Release();
+    bool isDir = true;
+    if (sector >= 0)
+    {
+        isDir = dir->IsDir(name);
+    }
     delete dir;
 
     OpenFile *openFile = nullptr;
+
+    if (!isDir)
+    {
+        DEBUG('f', "Tried to open file %s as a directory\n", name);
+        return openFile;
+    }
+
     if (sector >= 0)
     {
         DEBUG('f', "File %s found in directory.\n", name);

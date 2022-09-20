@@ -45,6 +45,9 @@ public:
     /// Find the sector number of the `FileHeader` for file: `name`.
     int Find(const char *name);
 
+    /// Check if file is a directory
+    bool IsDir(const char *name);
+
     /// Add a file name into the directory.
     bool Add(const char *name, int newSector, bool isDir);
 

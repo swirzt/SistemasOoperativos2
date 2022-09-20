@@ -127,64 +127,29 @@ int main(void)
             continue;
         }
 
-        // Comment and uncomment according to whether command line arguments
-        // are given in the system call or not.
-        // const SpaceId newProc = Exec(line);
-        // const SpaceId newProc = Exec(line, (int)argv);
-
-        // TODO: check for errors when calling `Exec`; this depends on how
-        //       errors are reported.
-
-        //    Join(newProc);
-
-        // Funciona mal la opcion con & porque no funciona Thread::Join
-        // No lo podemos solucionar porque no tenemos las correcciones de la plancha 2
-        if (line[0] == '&')
+        int notToJoin = line[0] == '&'; // notToJoin vale 0 o 1, perdonenme por hacer esta masacre
+        SpaceId newProc = -1;
+        if (strcmp(line + notToJoin, "ls") == 0)
         {
-            if (strcmp(line + 1, "ls") == 0)
-            {
-                Ls();
-            }
-            else if (strcmp(line + 1, "cd") == 0)
-            {
-                Cd((const char *)(argv[1]));
-            }
-            else if (strcmp(line + 1, "mkdir") == 0)
-            {
-                Mkdir((const char *)(argv[1]));
-            }
-            else
-            {
-                Exec(line + 1, argv, 0);
-            }
+            Ls();
+        }
+        else if (strcmp(line + notToJoin, "cd") == 0)
+        {
+            Cd((const char *)(argv[1]));
+        }
+        else if (strcmp(line + notToJoin, "mkdir") == 0)
+        {
+            Mkdir((const char *)(argv[1]));
         }
         else
         {
-            if (strcmp(line, "ls") == 0)
-            {
-                Ls();
-            }
-            else if (strcmp(line, "cd") == 0)
-            {
-                Cd((const char *)(argv[1]));
-            }
-            else if (strcmp(line, "mkdir") == 0)
-            {
-                Mkdir((const char *)(argv[1]));
-            }
-            else
-            {
-                const SpaceId newProc = Exec(line, argv, 1);
-                if (newProc >= 0)
-                    Join(newProc);
-            }
+            newProc = Exec(line + notToJoin, argv, !notToJoin);
         }
 
-        // TODO: is it necessary to check for errors after `Join` too, or
-        //       can you be sure that, with the implementation of the system
-        //       call handler you made, it will never give an error?; what
-        //       happens if tomorrow the implementation changes and new
-        //       error conditions appear?
+        if (!notToJoin && newProc >= 0)
+        {
+            Join(newProc);
+        }
     }
 
     // Never reached.

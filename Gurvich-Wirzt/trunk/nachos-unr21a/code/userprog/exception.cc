@@ -452,7 +452,6 @@ SyscallHandler(ExceptionType _et)
 #ifndef DEMAND_LOADING
 #ifndef FILESYS_STUB
             fileSystem->Close(archivo);
-            DEBUG('e', "ACA BORRE DESPUES DE LLAMAR A EXEC, ESTO ESTA MAL!!!!\n");
 #else
             delete archivo;
 #endif
