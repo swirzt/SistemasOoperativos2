@@ -255,6 +255,13 @@ bool FileSystem::CreateDirectory(const char *name)
     return CreateBoth(name, true);
 }
 
+OpenFile *duplicateDirectory()
+{
+    OpenFile *directoryFile = currentThread->GetCurrentDirectory();
+    return new OpenFile(directoryFile->GetSector(), directoryFile->GetName());
+    // return newdir;
+}
+
 /// Open a file for reading and writing.
 ///
 /// To open a file:
@@ -262,10 +269,8 @@ bool FileSystem::CreateDirectory(const char *name)
 /// 2. Bring the header into memory.
 ///
 /// * `name` is the text name of the file to be opened.
-OpenFile *
-FileSystem::Open(const char *name)
+OpenFile *FileSystem::Open(const char *name)
 {
-    // asociar archivo a su sector
     ASSERT(name != nullptr);
     OpenFile *directoryFile = currentThread->GetCurrentDirectory();
 
@@ -282,14 +287,13 @@ FileSystem::Open(const char *name)
     dirlock->Release();
     delete dir;
 
-    OpenFile *openFile = nullptr;
-
     if (isDir)
     {
         DEBUG('f', "Tried to open directory %s as a file\n", name);
-        return openFile;
+        return nullptr;
     }
 
+    OpenFile *openFile = nullptr;
     if (sector >= 0)
     {
         DEBUG('f', "File %s found in directory.\n", name);
@@ -322,8 +326,7 @@ FileSystem::Open(const char *name)
     return openFile; // Return null if not found.
 }
 
-OpenFile *
-FileSystem::OpenDir(const char *name)
+OpenFile *FileSystem::OpenDir(const char *name)
 {
     ASSERT(name != nullptr);
     OpenFile *directoryFile = currentThread->GetCurrentDirectory();
@@ -341,14 +344,13 @@ FileSystem::OpenDir(const char *name)
     }
     delete dir;
 
-    OpenFile *openFile = nullptr;
-
     if (!isDir)
     {
         DEBUG('f', "Tried to open file %s as a directory\n", name);
-        return openFile;
+        return nullptr;
     }
 
+    OpenFile *openFile = nullptr;
     if (sector >= 0)
     {
         DEBUG('f', "File %s found in directory.\n", name);
@@ -637,7 +639,7 @@ CheckDirectory(const RawDirectory *rd, Bitmap *shadowMap)
 
 bool FileSystem::Check()
 {
-    OpenFile *directoryFile = currentThread->GetCurrentDirectory();
+    OpenFile *directoryFile = rootDirectoryFile;
     DEBUG('f', "Performing filesystem check\n");
     bool error = false;
 
@@ -668,6 +670,8 @@ bool FileSystem::Check()
     dirH->FetchFrom(DIRECTORY_SECTOR);
     error |= CheckFileHeader(dirRH, DIRECTORY_SECTOR, shadowMap);
     delete dirH;
+
+    DEBUG('f', "Checking directory file header.\n");
 
     Bitmap *freeMap = new Bitmap(NUM_SECTORS);
     freeMap->FetchFrom(freeMapFile);
@@ -762,19 +766,22 @@ bool FileSystem::ChangeDirectory(const char *name)
         result = newDir != nullptr;
     }
 
+    OpenFile *before = currentThread->GetCurrentDirectory();
+    if (before != rootDirectoryFile && before != temp)
+        delete before;
+
     if (result)
     {
         currentThread->SetCurrentDirectory(newDir);
         DEBUG('f', "Changed directory to \"%s\".\n", name);
-        if (temp != rootDirectoryFile && temp != nullptr)
+        if (temp != rootDirectoryFile)
             delete temp;
     }
     else
     {
         currentThread->SetCurrentDirectory(temp);
         DEBUG('f', "Could not change directory to \"%s\".\n", name);
-        if (newDir != nullptr)
-            delete newDir;
+        delete newDir;
     }
     return result;
 }
