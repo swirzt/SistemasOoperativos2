@@ -25,6 +25,7 @@
 #include "filesys/directory_entry.hh"
 #include "filesys/open_file_data.hh"
 #include "threads/system.hh"
+#include "userprog/executable.hh"
 #include "args.hh"
 
 #include <stdio.h>
@@ -443,20 +444,37 @@ SyscallHandler(ExceptionType _et)
         }
         else
         {
-            DEBUG('e', "Creating a new thread\n");
-            Thread *hilo = new Thread(filename, joinable, 0);
-            AddressSpace *memoria = new AddressSpace(archivo, hilo->pid);
-            hilo->space = memoria;
-            hilo->Fork(initialize, args);
-            DEBUG('e', "Initialized new exec thread \n");
+            Executable *exe = new Executable(archivo);
+            if (!exe->CheckMagic())
+            {
+                delete exe;
 #ifndef DEMAND_LOADING
 #ifndef FILESYS_STUB
-            fileSystem->Close(archivo);
+                fileSystem->Close(archivo);
 #else
-            delete archivo;
+                delete archivo;
 #endif
 #endif
-            machine->WriteRegister(2, hilo->pid);
+                DEBUG('e', "Invalid file \n");
+                machine->WriteRegister(2, -1);
+            }
+            else
+            {
+                DEBUG('e', "Creating a new thread\n");
+                Thread *hilo = new Thread(filename, joinable, 0);
+                AddressSpace *memoria = new AddressSpace(exe, hilo->pid);
+                hilo->space = memoria;
+                hilo->Fork(initialize, args);
+                DEBUG('e', "Initialized new exec thread \n");
+#ifndef DEMAND_LOADING
+#ifndef FILESYS_STUB
+                fileSystem->Close(archivo);
+#else
+                delete archivo;
+#endif
+#endif
+                machine->WriteRegister(2, hilo->pid);
+            }
         }
         break;
     }

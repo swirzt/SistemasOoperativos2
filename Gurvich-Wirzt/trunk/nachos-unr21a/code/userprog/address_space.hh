@@ -36,7 +36,7 @@ public:
     /// Parameters:
     /// * `executable_file` is the open file that corresponds to the
     ///   program; it contains the object code to load into memory.
-    AddressSpace(OpenFile *executable_file, unsigned pid); // Si no hay swap ni siquiera se usa
+    AddressSpace(Executable *executable, unsigned pid); // Si no hay swap ni siquiera se usa
 
     /// De-allocate an address space.
     ~AddressSpace();

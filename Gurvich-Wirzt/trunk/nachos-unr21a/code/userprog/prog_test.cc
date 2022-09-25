@@ -12,6 +12,7 @@
 #include "machine/console.hh"
 #include "threads/semaphore.hh"
 #include "threads/system.hh"
+#include "userprog/executable.hh"
 
 #include <stdio.h>
 
@@ -29,7 +30,7 @@ void StartProcess(const char *filename)
         return;
     }
 
-    AddressSpace *space = new AddressSpace(executable, 0);
+    AddressSpace *space = new AddressSpace(new Executable(executable), 0);
     currentThread->space = space;
 
 #ifndef DEMAND_LOADING

@@ -57,11 +57,12 @@ void swapName(int pid, char *name)
 /// First, set up the translation from program memory to physical memory.
 /// For now, this is really simple (1:1), since we are only uniprogramming,
 /// and we have a single unsegmented page table.
-AddressSpace::AddressSpace(OpenFile *executable_file, unsigned pid)
+AddressSpace::AddressSpace(Executable *executable, unsigned pid)
 {
-  ASSERT(executable_file != nullptr);
+  // ASSERT(executable_file != nullptr);
 
-  exe = new Executable(executable_file);
+  // exe = new Executable(executable_file);
+  exe = executable;
   ASSERT(exe->CheckMagic());
 
   // How big is address space?
