@@ -158,6 +158,13 @@ Lock *getDirLock(OpenFile *directoryFile)
     return dirlock;
 }
 
+OpenFile *duplicateDirectory()
+{
+    OpenFile *directoryFile = currentThread->GetCurrentDirectory();
+    return new OpenFile(directoryFile->GetSector(), directoryFile->GetName());
+    // return newdir;
+}
+
 /// Create a file in the Nachos file system (similar to UNIX `create`).
 /// Since we cannot increase the size of files dynamically, we have to give
 /// `Create` the initial size of the file.
@@ -183,8 +190,33 @@ Lock *getDirLock(OpenFile *directoryFile)
 ///
 /// * `name` is the name of file to be created.
 /// * `initialSize` is the size of file to be created.
-
 bool FileSystem::CreateBoth(const char *name, bool isDir)
+{
+    char path[strlen(name) + 1];
+    const char *filename = sep_filepath(name, path);
+    if (strcmp(path, "") == 0)
+    {
+        return CreateBothAtomic(filename, isDir);
+    }
+    else
+    {
+        OpenFile *save = duplicateDirectory();
+        bool cresult = ChangeDirectory(path);
+        if (!cresult)
+        {
+            delete save;
+            return false;
+        }
+        bool created = CreateBothAtomic(filename, isDir);
+        OpenFile *temp = currentThread->GetCurrentDirectory();
+        if (temp != rootDirectoryFile)
+            delete temp;
+        currentThread->SetCurrentDirectory(save);
+        return created;
+    }
+}
+
+bool FileSystem::CreateBothAtomic(const char *name, bool isDir)
 {
     ASSERT(name != nullptr);
 
@@ -255,13 +287,6 @@ bool FileSystem::CreateDirectory(const char *name)
     return CreateBoth(name, true);
 }
 
-OpenFile *duplicateDirectory()
-{
-    OpenFile *directoryFile = currentThread->GetCurrentDirectory();
-    return new OpenFile(directoryFile->GetSector(), directoryFile->GetName());
-    // return newdir;
-}
-
 /// Open a file for reading and writing.
 ///
 /// To open a file:
@@ -280,7 +305,12 @@ OpenFile *FileSystem::Open(const char *name)
     else
     {
         OpenFile *save = duplicateDirectory();
-        ChangeDirectory(path);
+        bool cresult = ChangeDirectory(path);
+        if (!cresult)
+        {
+            delete save;
+            return nullptr;
+        }
         OpenFile *file = OpenAtomic(filename);
         OpenFile *temp = currentThread->GetCurrentDirectory();
         if (temp != rootDirectoryFile)
@@ -606,7 +636,7 @@ CheckDirectory(const RawDirectory *rd, Bitmap *shadowMap)
 
     bool error = false;
     unsigned nameCount = 0;
-    unsigned dirSize = 2; // Cambiar este check
+    unsigned dirSize = rd->tableSize; // Cambiar este check
     const char *knownNames[dirSize];
 
     for (unsigned i = 0; i < dirSize; i++)
@@ -645,14 +675,29 @@ CheckDirectory(const RawDirectory *rd, Bitmap *shadowMap)
             }
 
             // Check sector.
-            error |= CheckSector(e->sector, shadowMap);
+            if (strcmp(e->name, ".") != 0 && strcmp(e->name, "..") != 0)
+            {
+                error |= CheckSector(e->sector, shadowMap);
 
-            // Check file header.
-            FileHeader *h = new FileHeader;
-            const RawFileHeader *rh = h->GetRaw();
-            h->FetchFrom(e->sector);
-            error |= CheckFileHeader(rh, e->sector, shadowMap);
-            delete h;
+                // Check file header.
+                FileHeader *h = new FileHeader;
+                const RawFileHeader *rh = h->GetRaw();
+                h->FetchFrom(e->sector);
+                error |= CheckFileHeader(rh, e->sector, shadowMap);
+                delete h;
+
+                // Check directory.
+                if (e->isDir)
+                {
+                    Directory *d = new Directory;
+                    const RawDirectory *rd2 = d->GetRaw();
+                    OpenFile *f = new OpenFile(e->sector, "TempDir");
+                    d->FetchFrom(f);
+                    error |= CheckDirectory(rd2, shadowMap);
+                    delete f;
+                    delete d;
+                }
+            }
         }
     }
     return error;
@@ -809,7 +854,6 @@ bool FileSystem::ChangeDirectory(const char *name)
     {
         currentThread->SetCurrentDirectory(temp);
         DEBUG('f', "Could not change directory to \"%s\".\n", name);
-        delete newDir;
     }
     return result;
 }
