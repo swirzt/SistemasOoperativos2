@@ -254,6 +254,18 @@ void Directory::Print() const
     delete hdr;
 }
 
+bool Directory::IsEmpty() const
+{
+    for (unsigned i = 0; i < raw.tableSize; i++)
+    {
+        if (raw.table[i].inUse)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 const RawDirectory *
 Directory::GetRaw() const
 {

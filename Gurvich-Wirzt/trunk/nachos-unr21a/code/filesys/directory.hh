@@ -61,6 +61,8 @@ public:
     /// and their contents.
     void Print() const;
 
+    bool IsEmpty() const;
+
     /// Get the raw directory structure.
     ///
     /// NOTE: this should only be used by routines that operating on the file

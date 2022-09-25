@@ -148,7 +148,14 @@ int main(void)
 
         if (!notToJoin && newProc >= 0)
         {
-            Join(newProc);
+            int result = Join(newProc);
+            if (result < 0)
+            {
+                WriteError("Process terminated with abnormal value", OUTPUT);
+                char resultStr[10];
+                itoa(result, resultStr);
+                WriteError(resultStr, OUTPUT);
+            }
         }
     }
 

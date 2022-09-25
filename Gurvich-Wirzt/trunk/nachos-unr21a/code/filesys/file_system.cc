@@ -498,24 +498,50 @@ bool FileSystem::Remove(const char *name)
     Lock *dirlock = getDirLock(directoryFile);
     dir->FetchFrom(directoryFile);
     int sector = dir->Find(name);
+    bool isDir = dir->IsDir(name);
     dirlock->Release();
     delete dir;
 
     if (sector == -1)
         return false;
-
-    OpenFileData *data;
-    openFilesDataLock->Acquire();
-    if (openFilesData->get(sector, &data))
+    if (!isDir)
     {
-        data->deleted = true;
-        openFilesDataLock->Release();
-        return true;
+        OpenFileData *data;
+        openFilesDataLock->Acquire();
+        if (openFilesData->get(sector, &data))
+        {
+            data->deleted = true;
+            openFilesDataLock->Release();
+            return true;
+        }
+        else
+        {
+            openFilesDataLock->Release();
+            return CleanFile(name);
+        }
     }
     else
     {
-        openFilesDataLock->Release();
-        return CleanFile(name);
+        OpenFile *tempDirFile = new OpenFile(sector, name);
+        Directory *tempDir = new Directory();
+        Lock *tempDirlock = getDirLock(tempDirFile);
+        // delete if dir is empty
+        tempDir->FetchFrom(tempDirFile);
+        if (tempDir->IsEmpty())
+        {
+            tempDirlock->Release();
+            delete tempDir;
+            delete tempDirFile;
+            return CleanFile(name);
+        }
+        else
+        {
+            tempDirlock->Release();
+            delete tempDir;
+            delete tempDirFile;
+            DEBUG('f', "El directorio %s no esta vacio\n", name);
+            return false;
+        }
     }
 }
 
@@ -604,12 +630,23 @@ CheckFileHeader(const RawFileHeader *rh, unsigned num, Bitmap *shadowMap)
     error |= CheckForError(rh->numSectors >= DivRoundUp(rh->numBytes,
                                                         SECTOR_SIZE),
                            "sector count not compatible with file size.");
-    error |= CheckForError(rh->numSectors < NUM_DIRECT,
-                           "too many blocks.");
-    for (unsigned i = 0; i < rh->numSectors; i++)
+    // Tener muchos bloques ya no es error
+    // error |= CheckForError(rh->numSectors < NUM_DIRECT,
+    //                        "too many blocks.");
+    for (unsigned i = 0; i < rh->numSectors && i < NUM_DIRECT; i++)
     {
         unsigned s = rh->dataSectors[i];
         error |= CheckSector(s, shadowMap);
+    }
+
+    if (rh->numSectors > NUM_DIRECT)
+    {
+        FileHeader *hdr = new FileHeader();
+        const RawFileHeader *rh2 = hdr->GetRaw();
+        hdr->FetchFrom(rh->nextInode);
+        error |= CheckSector(rh->nextInode, shadowMap);
+        error |= CheckFileHeader(rh2, rh->nextInode, shadowMap);
+        delete hdr;
     }
     return error;
 }

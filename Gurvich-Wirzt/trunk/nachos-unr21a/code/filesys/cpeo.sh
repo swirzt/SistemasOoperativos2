@@ -4,5 +4,8 @@
 ./nachos -cp ../userland/cd cd
 ./nachos -cp ../userland/mkdir mkdir
 ./nachos -cp ../userland/cat cat
-./nachos -cp ../userland/waybig waybig
+./nachos -cp test/waybig waybig
+./nachos -cp ../userland/rm rm
+./nachos -cp ../userland/echo echo
+./nachos -cp ../userland/touch touch
 ./nachos -D
