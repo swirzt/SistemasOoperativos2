@@ -64,6 +64,7 @@ extern Debug debug;
 extern bool intcomp(int a, int b);
 extern bool strcomp(const char *s1, const char *s2);
 extern const char *get_filepath(const char *str, char *substr);
+extern const char *sep_filepath(const char *str, char *path);
 
 #define DEBUG(...) (debug.Print)(__FILE__, __LINE__, __func__, __VA_ARGS__)
 #define DEBUG_CONT (debug.PrintCont)

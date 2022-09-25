@@ -35,3 +35,28 @@ const char *get_filepath(const char *str, char *substr)
     else
         return str;
 }
+
+const char *sep_filepath(const char *str, char *path)
+{
+    int lastbar = -1;
+    for (int i = 0; str[i] != '\0'; i++)
+    {
+        if (str[i] == '/')
+            lastbar = i;
+    }
+
+    if (lastbar == -1)
+    {
+        // str es solo un nombre de archivo
+        path[0] = '\0';
+        return str;
+    }
+    else
+    {
+        lastbar++;
+        // str es un path, al menos tiene un /
+        strncpy(path, str, lastbar);
+        path[lastbar] = '\0';
+        return str + lastbar;
+    }
+}

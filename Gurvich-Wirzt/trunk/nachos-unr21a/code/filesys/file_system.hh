@@ -127,6 +127,7 @@ public:
 
     /// Open a file (UNIX `open`).
     OpenFile *Open(const char *name);
+    OpenFile *OpenAtomic(const char *name);
 
     /// Open a directory (UNIX `open`).
     OpenFile *OpenDir(const char *name);

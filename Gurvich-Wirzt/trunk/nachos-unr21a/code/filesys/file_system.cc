@@ -271,6 +271,27 @@ OpenFile *duplicateDirectory()
 /// * `name` is the text name of the file to be opened.
 OpenFile *FileSystem::Open(const char *name)
 {
+    char path[strlen(name) + 1];
+    const char *filename = sep_filepath(name, path);
+    if (strcmp(path, "") == 0)
+    {
+        return OpenAtomic(filename);
+    }
+    else
+    {
+        OpenFile *save = duplicateDirectory();
+        ChangeDirectory(path);
+        OpenFile *file = OpenAtomic(filename);
+        OpenFile *temp = currentThread->GetCurrentDirectory();
+        if (temp != rootDirectoryFile)
+            delete temp;
+        currentThread->SetCurrentDirectory(save);
+        return file;
+    }
+}
+
+OpenFile *FileSystem::OpenAtomic(const char *name)
+{
     ASSERT(name != nullptr);
     OpenFile *directoryFile = currentThread->GetCurrentDirectory();
 
