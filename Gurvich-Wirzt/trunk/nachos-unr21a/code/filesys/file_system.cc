@@ -766,6 +766,13 @@ bool FileSystem::ChangeDirectory(const char *name)
     {
         currentThread->SetCurrentDirectory(rootDirectoryFile);
         name++;
+
+        if (name[0] == '\0')
+        {
+            DEBUG('f', "Changed to root directory.\n");
+            delete temp;
+            return true;
+        }
     }
 
     char path[strlen(name) + 1]; // Lo almacena en heap o en pila? Creemos que en pila, gracias GCC
