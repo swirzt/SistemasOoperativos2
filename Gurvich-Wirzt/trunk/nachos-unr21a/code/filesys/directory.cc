@@ -217,13 +217,21 @@ bool Directory::Remove(const char *name)
     return true;
 }
 
+bool isSWAP(const char *str)
+{
+    return !strncmp(str, "SWAP.", 4);
+}
+
 /// List all the file names in the directory.
 void Directory::List() const
 {
-    for (unsigned i = 0; i < raw.tableSize; i++)
+    printf("%s/\n", raw.table[0].name);
+    printf("%s/\n", raw.table[1].name);
+    for (unsigned i = 2; i < raw.tableSize; i++)
     {
-        if (raw.table[i].inUse)
+        if (raw.table[i].inUse && !isSWAP(raw.table[i].name) && raw.table[i].name[0] != '.')
         {
+
             raw.table[i].isDir ? printf("%s/\n", raw.table[i].name) : printf("%s\n", raw.table[i].name);
             // printf("%s\n", raw.table[i].name);
         }

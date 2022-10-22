@@ -38,19 +38,12 @@ unsigned charlen(char *word)
 
 void swapName(int pid, char *name)
 {
-  name[0] = 'S';
-  name[1] = 'W';
-  name[2] = 'A';
-  name[3] = 'P';
-  name[4] = '.';
+  strncpy(name, "SWAP.", 6);
   char pidc[20];
   std::sprintf(pidc, "%d", pid);
   int i, len = charlen(pidc);
   for (i = 0; i < len + 1; i++)
-  {
     name[i + 5] = pidc[i];
-  }
-  // name[i + 5] = '\0';
 }
 #endif
 

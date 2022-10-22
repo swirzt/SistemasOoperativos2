@@ -368,13 +368,13 @@ SyscallHandler(ExceptionType _et)
 
         if (archivo == nullptr)
         {
-            DEBUG('e', "Can't close file %u", fid);
+            DEBUG('e', "Can't close file %u\n", fid);
 
             machine->WriteRegister(2, -1);
         }
         else
         {
-            DEBUG('e', "Closed file %u", fid);
+            DEBUG('e', "Closed file %u\n", fid);
 #ifndef FILESYS_STUB
             fileSystem->Close(archivo);
 #else

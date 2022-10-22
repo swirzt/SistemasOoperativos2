@@ -153,7 +153,12 @@ Lock *getDirLock(OpenFile *directoryFile)
 {
     int sector = directoryFile->GetSector();
     Lock *dirlock;
-    ASSERT(openSysList->get(sector, &dirlock));
+    // ASSERT(openSysList->get(sector, &dirlock));
+    if (!openSysList->get(sector, &dirlock))
+    {
+        dirlock = new Lock("dirLock");
+        openSysList->insert(sector, dirlock);
+    }
     dirlock->Acquire();
     return dirlock;
 }
